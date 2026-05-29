@@ -1,79 +1,63 @@
 package com.znxsgl.config;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.znxsgl.entity.User;
-import com.znxsgl.repository.UserRepository;
+import com.znxsgl.mapper.UserMapper;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
 
-    private final UserRepository userRepository;
+    private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbc;
 
-    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
+    public DataInitializer(UserMapper userMapper, PasswordEncoder passwordEncoder, JdbcTemplate jdbc) {
+        this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
+        this.jdbc = jdbc;
     }
 
     @Override
     public void run(String... args) {
-        if (userRepository.count() > 0) {
-            System.out.println("===== 数据库已有用户，跳过初始化 =====");
+        List<User> users = userMapper.selectList(null);
+
+        if (users.isEmpty()) {
+            System.out.println("===== 用户表为空，请先执行 seed_all.sql ======");
             return;
         }
 
-        String pwd = passwordEncoder.encode("123456");
-        System.out.println("===== 生成的密码哈希: " + pwd + " =====");
+        int updated = 0;
+        for (User u : users) {
+            String hash = u.getPasswordHash();
+            if (hash != null && hash.length() < 20) {
+                u.setPasswordHash(passwordEncoder.encode(hash));
+                userMapper.updateById(u);
+                updated++;
+                System.out.println("  密码加密: " + u.getUsername());
+            }
+        }
 
-        // 创建教师
-        User teacher1 = new User();
-        teacher1.setUsername("teacher1");
-        teacher1.setPasswordHash(pwd);
-        teacher1.setRealName("张明远");
-        teacher1.setRole(2);
-        teacher1.setEmail("zhangmy@university.edu.cn");
-        teacher1.setStatus(1);
-        userRepository.save(teacher1);
+        if (updated > 0) {
+            System.out.println("===== 已加密 " + updated + " 个用户密码（密码均为 123456）=====");
+        } else {
+            System.out.println("===== 所有密码均已加密，跳过 =====");
+        }
 
-        User teacher2 = new User();
-        teacher2.setUsername("teacher2");
-        teacher2.setPasswordHash(pwd);
-        teacher2.setRealName("李伟强");
-        teacher2.setRole(2);
-        teacher2.setEmail("liwq@university.edu.cn");
-        teacher2.setStatus(1);
-        userRepository.save(teacher2);
-
-        // 创建管理员
-        User admin = new User();
-        admin.setUsername("admin");
-        admin.setPasswordHash(pwd);
-        admin.setRealName("系统管理员");
-        admin.setRole(3);
-        admin.setStatus(1);
-        userRepository.save(admin);
-
-        // 创建学生
-        User student1 = new User();
-        student1.setStudentNo("20240101001");
-        student1.setUsername("student1");
-        student1.setPasswordHash(pwd);
-        student1.setRealName("张明");
-        student1.setRole(1);
-        student1.setStatus(1);
-        userRepository.save(student1);
-
-        User student2 = new User();
-        student2.setStudentNo("20240101002");
-        student2.setUsername("student2");
-        student2.setPasswordHash(pwd);
-        student2.setRealName("李婷");
-        student2.setRole(1);
-        student2.setStatus(1);
-        userRepository.save(student2);
-
-        System.out.println("===== 默认用户创建完成（密码均为 123456） =====");
+        // 修复课程表：给 credit 为 NULL 或 0 的课程设置合理课时
+        // 默认值按课程类型：必修=4, 限选=2, 公共课=2
+        jdbc.update("UPDATE course SET credit = 4 WHERE (credit IS NULL OR credit = 0) AND course_type = '必修'");
+        jdbc.update("UPDATE course SET credit = 2 WHERE (credit IS NULL OR credit = 0) AND course_type IN ('限选','选修')");
+        jdbc.update("UPDATE course SET credit = 2 WHERE (credit IS NULL OR credit = 0)");
+        int fixed = jdbc.queryForObject("SELECT COUNT(*) FROM course WHERE credit IS NULL OR credit = 0", Integer.class);
+        if (fixed > 0) {
+            System.out.println("===== 仍有 " + fixed + " 个课程课时为0 =====");
+        }
+        System.out.println("===== 课程课时已检查 =====");
     }
 }

@@ -154,10 +154,10 @@
             <span class="logo-text">学习中心</span>
         </div>
         <ul class="nav-list">
-            <li class="nav-item active"><span class="nav-icon">📊</span>数据总览</li>
-            <li class="nav-item"><span class="nav-icon">👥</span>学生列表</li>
-            <li class="nav-item"><span class="nav-icon">📈</span>学习统计</li>
-            <li class="nav-item"><span class="nav-icon">📋</span>课程管理</li>
+            <li class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>数据总览</li>
+            <li class="nav-item" data-page="courses"><span class="nav-icon">📋</span>课程管理</li>
+            <li class="nav-item" data-page="students"><span class="nav-icon">👥</span>学生列表</li>
+            <li class="nav-item" data-page="stats"><span class="nav-icon">📈</span>学习统计</li>
             <li class="nav-item"><span class="nav-icon">⚙️</span>系统设置</li>
         </ul>
         <div class="sidebar-footer">
@@ -201,6 +201,7 @@
     document.getElementById('sName').textContent = userName;
     document.getElementById('sAvatar').textContent = userName.charAt(0);
 
+    const API = 'http://localhost:8080';
     const now = new Date();
     document.getElementById('headerDate').textContent =
         `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
@@ -210,81 +211,1258 @@
         window.location.href = 'login.html';
     }
 
+    // ===== 导航切换 =====
+    document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+        item.addEventListener('click', function() {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            this.classList.add('active');
+            const page = this.dataset.page;
+            document.querySelector('.page-title').textContent =
+                page === 'dashboard' ? '数据总览' :
+                page === 'courses' ? '课程管理' :
+                page === 'stats' ? '学习统计' : page;
+            document.querySelector('.page-sub').textContent =
+                page === 'dashboard' ? '欢迎回来' :
+                page === 'courses' ? '查看所教课程与班级' :
+                page === 'stats' ? '班级图谱 · 个人图谱' : '';
+            if (page === 'dashboard') loadDashboard();
+            else if (page === 'courses') loadCourses();
+            else if (page === 'stats') loadStats();
+            else document.getElementById('pageContent').innerHTML =
+                `<div style="text-align:center;padding:80px 0;color:#86868B;">功能开发中...</div>`;
+        });
+    });
+
     // ===== 加载仪表盘 =====
     loadDashboard();
 
-    function loadDashboard() {
+    async function loadDashboard() {
         const content = document.getElementById('pageContent');
-        content.innerHTML = `
-            <div class="welcome-card">
-                <h2>👋 欢迎回来，${userName}老师</h2>
-                <p>今天是 ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日，祝您工作愉快</p>
-            </div>
-            <div class="stats-grid">
-                <div class="stat-item"><div class="stat-label">学生总人数</div><div class="stat-value" style="color:#0A84FF;">386</div><div class="stat-change up">↑ 12 较上周</div></div>
-                <div class="stat-item"><div class="stat-label">今日在线</div><div class="stat-value" style="color:#34C759;">142</div><div class="stat-change up">↑ 36.8%</div></div>
-                <div class="stat-item"><div class="stat-label">平均学习时长</div><div class="stat-value">2.6<span style="font-size:13px;">h</span></div><div class="stat-change up">↑ 0.4h</div></div>
-                <div class="stat-item"><div class="stat-label">刷题正确率</div><div class="stat-value" style="color:#FF9500;">82.3%</div><div class="stat-change up">↑ 3.1%</div></div>
-            </div>
-            <div class="charts-grid">
-                <div class="card"><div class="card-title">学习时长趋势（近7天）</div><div class="chart-box"><canvas id="chartTrend"></canvas></div></div>
-                <div class="card"><div class="card-title">各科目正确率</div><div class="chart-box"><canvas id="chartSubjects"></canvas></div></div>
-            </div>
-            <div class="card">
-                <div class="card-title">最近活跃学生</div>
-                <table class="data-table">
-                    <thead><tr><th>姓名</th><th>学号</th><th>班级</th><th>学习时长</th><th>刷题数</th><th>正确率</th><th>状态</th></tr></thead>
-                    <tbody>
-                        <tr><td>张明</td><td>20240101001</td><td>计算机2301</td><td>128h</td><td>342</td><td style="color:#34C759;">85.6%</td><td><span class="status on">● 在线</span></td></tr>
-                        <tr><td>李婷</td><td>20240101002</td><td>计算机2301</td><td>116h</td><td>298</td><td style="color:#34C759;">88.3%</td><td><span class="status on">● 在线</span></td></tr>
-                        <tr><td>王浩</td><td>20240102001</td><td>计算机2302</td><td>109h</td><td>275</td><td style="color:#0A84FF;">82.7%</td><td><span class="status off">● 离线</span></td></tr>
-                        <tr><td>陈雪</td><td>20240102002</td><td>计算机2302</td><td>98h</td><td>260</td><td style="color:#34C759;">84.1%</td><td><span class="status on">● 在线</span></td></tr>
-                    </tbody>
-                </table>
-            </div>
-        `;
+        content.innerHTML = '<div style="text-align:center;padding:60px;color:#86868B;">加载中...</div>';
 
-        // 初始化图表
-        setTimeout(() => {
-            const days = ['12/09','12/10','12/11','12/12','12/13','12/14','12/15'];
-            const ctx1 = document.getElementById('chartTrend');
-            if (ctx1) new Chart(ctx1, {
-                type: 'line',
-                data: {
-                    labels: days,
-                    datasets: [{
-                        label:'', data:[1.8,2.2,2.8,2.4,3.1,2.6,2.9],
-                        borderColor:'#0A84FF', backgroundColor:'rgba(10,132,255,0.08)',
-                        borderWidth:2, tension:0.4, pointRadius:3, fill:true
-                    }]
-                },
-                options: {
-                    responsive:true, maintainAspectRatio:false,
-                    plugins:{legend:{display:false}},
-                    scales:{
-                        x:{grid:{color:'rgba(229,231,235,0.6)',drawBorder:false}, ticks:{color:'#86868B',font:{size:11}}},
-                        y:{grid:{color:'rgba(229,231,235,0.6)',drawBorder:false}, ticks:{color:'#86868B',font:{size:11}}, beginAtZero:true, max:4}
+        try {
+            // 并行获取统计数据 + 趋势数据
+            const [statsRes, trendRes] = await Promise.all([
+                fetch(API + '/api/teacher/stats', { headers: { 'Authorization': 'Bearer ' + token } }),
+                fetch(API + '/api/teacher/trend', { headers: { 'Authorization': 'Bearer ' + token } })
+            ]);
+
+            let stats = { totalStudents: 0, onlineToday: 0, avgFocusMinutes: 0, students: [] };
+            let trend = [];
+
+            if (statsRes.ok) stats = await statsRes.json();
+            if (trendRes.ok) trend = await trendRes.json();
+
+            // 格式化平均时长为 h 或 min
+            let avgStr = '0h';
+            if (stats.avgFocusMinutes >= 60) {
+                avgStr = (stats.avgFocusMinutes / 60).toFixed(1) + 'h';
+            } else {
+                avgStr = stats.avgFocusMinutes + 'min';
+            }
+
+            content.innerHTML = `
+                <div class="welcome-card">
+                    <h2>👋 欢迎回来，${userName}老师</h2>
+                    <p>今天是 ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日，祝您工作愉快</p>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item"><div class="stat-label">学生总人数</div><div class="stat-value" style="color:#0A84FF;">${stats.totalStudents}</div><div class="stat-change">累计</div></div>
+                    <div class="stat-item"><div class="stat-label">今日在线</div><div class="stat-value" style="color:#34C759;">${stats.onlineToday}</div><div class="stat-change">今日活跃</div></div>
+                    <div class="stat-item"><div class="stat-label">平均学习时长</div><div class="stat-value">${avgStr}</div><div class="stat-change">今日人均</div></div>
+                    <div class="stat-item"><div class="stat-label">刷题正确率</div><div class="stat-value" style="color:#86868B;">待开发</div><div class="stat-change">后续上线</div></div>
+                </div>
+                <div class="charts-grid">
+                    <div class="card"><div class="card-title">学习时长趋势（近7天·分钟）</div><div class="chart-box"><canvas id="chartTrend"></canvas></div></div>
+                    <div class="card"><div class="card-title">各科目正确率</div><div class="chart-box"><canvas id="chartSubjects"></canvas></div></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">活跃学生（按今日专注排序）</div>
+                    ${buildStudentTable(stats.students)}
+                </div>
+            `;
+
+            // 初始化趋势图
+            setTimeout(() => initCharts(trend), 100);
+
+        } catch (e) {
+            content.innerHTML = '<div style="text-align:center;padding:60px;color:#FF3B30;">无法连接后端服务器</div>';
+        }
+    }
+
+    function buildStudentTable(students) {
+        if (!students || students.length === 0) {
+            return '<div style="text-align:center;padding:20px;color:#86868B;">暂无数据</div>';
+        }
+        let html = '<table class="data-table"><thead><tr><th>姓名</th><th>学号</th><th>班级</th><th>今日专注</th><th>状态</th></tr></thead><tbody>';
+        students.forEach(s => {
+            let todayMin = Math.round((s.todaySeconds || 0) / 60);
+            let online = s.online === 1;
+            html += '<tr>' +
+                '<td>' + (s.realName || '') + '</td>' +
+                '<td>' + (s.studentNo || '') + '</td>' +
+                '<td>' + (s.className || '') + '</td>' +
+                '<td>' + todayMin + ' 分钟</td>' +
+                '<td><span class="status ' + (online ? 'on' : 'off') + '">' + (online ? '● 在线' : '● 离线') + '</span></td>' +
+                '</tr>';
+        });
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function initCharts(trend) {
+        // 近7天日期
+        const days = [];
+        const data = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            days.push((d.getMonth()+1) + '/' + d.getDate());
+            data.push(0);
+        }
+        trend.forEach(t => {
+            const d = t.date;
+            for (let i = 0; i < days.length; i++) {
+                const ref = new Date(); ref.setDate(ref.getDate() - (6-i));
+                const refStr = ref.getFullYear() + '-' +
+                    String(ref.getMonth()+1).padStart(2,'0') + '-' +
+                    String(ref.getDate()).padStart(2,'0');
+                if (d === refStr || d.startsWith(refStr)) data[i] = Math.round(t.minutes || 0);
+            }
+        });
+
+        const ctx1 = document.getElementById('chartTrend');
+        if (ctx1) new Chart(ctx1, {
+            type: 'line', data: {
+                labels: days, datasets: [{
+                    data, borderColor:'#0A84FF',
+                    backgroundColor:'rgba(10,132,255,0.08)', borderWidth:2,
+                    tension:0.4, pointRadius:3, fill:true
+                }]
+            }, options: {
+                responsive:true, maintainAspectRatio:false,
+                plugins:{legend:{display:false}},
+                scales:{
+                    x:{grid:{color:'rgba(229,231,235,0.6)'}, ticks:{color:'#86868B',font:{size:11}}},
+                    y:{grid:{color:'rgba(229,231,235,0.6)'}, ticks:{color:'#86868B',font:{size:11}}, beginAtZero:true}
+                }
+            }
+        });
+
+        const ctx2 = document.getElementById('chartSubjects');
+        if (ctx2) new Chart(ctx2, {
+            type: 'bar', data: {
+                labels:['高数','数据结构','线性代数','大学物理','英语'],
+                datasets:[{data:[82,78,85,74,80], backgroundColor:['#0A84FF','#34C759','#FF9500','#AF52DE','rgba(10,132,255,0.5)'], borderRadius:4}]
+            }, options: {
+                responsive:true, maintainAspectRatio:false,
+                plugins:{legend:{display:false}},
+                scales:{
+                    x:{grid:{color:'rgba(229,231,235,0.6)'}, ticks:{color:'#86868B',font:{size:11}}},
+                    y:{grid:{color:'rgba(229,231,235,0.6)'}, ticks:{color:'#86868B',font:{size:11}, callback:v=>v+'%'}, beginAtZero:true, max:100}
+                }
+            }
+        });
+    }
+
+    // ===== 课程管理 =====
+
+    async function loadCourses() {
+        const content = document.getElementById('pageContent');
+        content.innerHTML = '<div style="text-align:center;padding:60px;color:#86868B;">加载中...</div>';
+
+        try {
+            const res = await fetch(API + '/api/schedule/teacher/courses', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!res.ok) { content.innerHTML = '<div style="text-align:center;padding:60px;color:#FF3B30;">无法加载</div>'; return; }
+            const courses = await res.json();
+            window._allCourses = courses; // 保存全局课程数据（含 credit）
+
+            // 按 active 状态分组：active===true 在线，否则已下架
+            const activeCourses = courses.filter(c => c.active === true);
+            const hiddenCourses = courses.filter(c => c.active !== true);
+
+            let html = '';
+
+            // 导入课表按钮
+            html += '<div class="card" style="margin-bottom:20px;padding:14px 20px;display:flex;align-items:center;gap:12px;">';
+            html += '<button class="btn btn-primary" onclick="showImportDialog()" style="padding:8px 18px;">📥 导入课表</button>';
+            html += '<span style="font-size:12px;color:#86868B;">支持 xlsx / pdf / doc / docx / 图片，AI 自动提取</span>';
+            html += '</div>';
+
+            // ==== 在线课程 ====
+            html += '<div style="margin-bottom:16px;">';
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
+            html += '<h2 style="font-size:18px;font-weight:600;color:#1D1D1F;">📋 在线课程</h2>';
+            html += '<span style="font-size:13px;color:#86868B;">共 ' + activeCourses.length + ' 门</span>';
+            html += '</div>';
+
+            if (activeCourses.length === 0) {
+                html += '<div class="card" style="text-align:center;padding:40px;color:#86868B;">暂无在线课程，请导入课表或上架已下架课程</div>';
+            } else {
+                activeCourses.forEach(c => {
+                    html += buildCourseCard(c, true);
+                });
+            }
+            html += '</div>';
+
+            // ==== 已下架课程 ====
+            if (hiddenCourses.length > 0) {
+                html += '<div style="margin-bottom:16px;">';
+                html += '<div style="display:flex;align-items:center;justify-content:space-between;margin:28px 0 14px;">';
+                html += '<h2 style="font-size:18px;font-weight:600;color:#86868B;">📦 已下架课程</h2>';
+                html += '<span style="font-size:13px;color:#86868B;">共 ' + hiddenCourses.length + ' 门</span>';
+                html += '</div>';
+
+                hiddenCourses.forEach(c => {
+                    html += buildCourseCard(c, false);
+                });
+                html += '</div>';
+            }
+
+            content.innerHTML = html;
+            // 调试：检查卡片是否嵌套
+            setTimeout(() => {
+                const cards = content.querySelectorAll('.card');
+                console.log('===== 课程卡片 DOM 检查 =====');
+                cards.forEach((card, i) => {
+                    const id = card.id || '(no-id)';
+                    const name = card.querySelector('span') ? card.querySelector('span').textContent : '(no-name)';
+                    const parentId = card.parentElement ? (card.parentElement.id || card.parentElement.className) : '(root)';
+                    console.log('卡片' + i + ': id=' + id + ', 名称=' + name.substring(0,30) + ', 父元素=' + parentId);
+                    // 检查是否有卡片嵌套在另一个卡片中
+                    const nestedCards = card.querySelectorAll('.card');
+                    if (nestedCards.length > 0) {
+                        console.warn('⚠️ 卡片 ' + id + ' 内部嵌套了 ' + nestedCards.length + ' 个卡片！');
+                        nestedCards.forEach(nc => console.warn('  -> 嵌套: id=' + (nc.id || 'no-id')));
                     }
+                });
+            }, 100);
+        } catch (e) {
+            content.innerHTML = '<div style="text-align:center;padding:60px;color:#FF3B30;">无法连接后端服务器</div>';
+        }
+    }
+
+    /** 构建课程卡片（支持在线课程也显示班级排课状态） */
+    function buildCourseCard(c, active) {
+        let totalStudents = 0;
+        let classData = [];
+        if (c.classes && c.classes.length > 0) {
+            c.classes.forEach(cl => {
+                totalStudents += cl.studentCount;
+                classData.push({
+                    classId: cl.classId, className: cl.className,
+                    studentCount: cl.studentCount, scheduled: cl.scheduled || false
+                });
+            });
+        }
+
+        // 将课程名存入全局映射，避免 onclick 中拼接字符串导致 HTML 截断
+        if (!window._courseNameMap) window._courseNameMap = {};
+        if (!window._classNameMap) window._classNameMap = {};
+        window._courseNameMap[c.courseId] = c.courseName;
+        classData.forEach(cl => {
+            window._classNameMap[cl.classId] = cl.className;
+        });
+
+        const cardStyle = active
+            ? 'border-left: 4px solid #0A84FF;'
+            : 'border-left: 4px solid #C7C7CC;';
+        const nameColor = active ? '#1D1D1F' : '#86868B';
+        const cardId = 'courseCard_' + c.courseId;
+
+        let html = '<div class="card" id="' + cardId + '" style="margin-bottom:12px;padding:18px 22px;' + cardStyle + '">';
+
+        html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">';
+        html += '<div style="flex:1;min-width:0;">';
+        html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
+        html += '<span style="font-size:16px;font-weight:600;color:' + nameColor + ';">' + escHtml(c.courseName) + '</span>';
+        html += '<span style="font-size:11px;color:#86868B;background:#F5F5F7;padding:2px 10px;border-radius:20px;">'
+            + escHtml(c.semester || '2025-2026-2') + '</span>';
+        if (!active) {
+            html += '<span style="font-size:11px;color:#FF9500;background:#FFF8F0;padding:2px 10px;border-radius:20px;">已下架</span>';
+        }
+        html += '</div>';
+        if (c.description) {
+            html += '<div style="margin-top:4px;font-size:12px;color:#A0AEC0;">' + escHtml(c.description) + '</div>';
+        }
+        html += '</div>';
+
+        // 右侧操作区
+        html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;margin-left:16px;">';
+
+        // 班级标签
+        if (classData.length > 0) {
+            html += '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;">';
+            classData.forEach(cl => {
+                const sched = cl.scheduled === true || cl.scheduled === 'true';
+                const bg = sched ? '#E8F0FE' : '#F5F5F7';
+                const color = sched ? '#0A84FF' : '#86868B';
+                const border = sched ? '#B8D4FE' : '#E5E7EB';
+                const icon = sched ? '✔' : '○';
+                const tagId = 'clazzTag_' + c.courseId + '_' + cl.classId;
+                html += '<span id="' + tagId + '" style="display:inline-flex;align-items:center;gap:4px;background:' + bg + ';color:' + color
+                    + ';padding:3px 10px;border-radius:6px;font-size:11px;white-space:nowrap;border:1px solid ' + border + ';">'
+                    + icon + ' ' + escHtml(cl.className) + ' ' + cl.studentCount + '人</span>';
+            });
+            html += '</div>';
+            if (c.classes && c.classes.length > 1) {
+                html += '<span style="font-size:11px;color:#A0AEC0;">共 ' + c.classes.length + ' 个班 · '
+                    + totalStudents + ' 名学生</span>';
+            }
+        }
+
+        // 操作按钮区域
+        html += '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">';
+        // 在线课程：显示每个班级的排课按钮
+        if (active) {
+            classData.forEach(cl => {
+                const sched = cl.scheduled === true || cl.scheduled === 'true';
+                html += '<button style="padding:3px 8px;font-size:11px;background:#E8F0FE;color:#0A84FF;'
+                    + 'border:1px solid ' + (sched ? '#0A84FF' : '#B8D4FE') + ';border-radius:6px;cursor:pointer;transition:all 0.15s;white-space:nowrap;" '
+                    + 'onclick="openSchedulePlannerById(' + c.courseId + ',' + cl.classId + ',' + sched + ')">'
+                    + (sched ? '📝 ' : '📅 ') + escHtml(cl.className) + '</button>';
+            });
+            html += '<button style="padding:4px 12px;font-size:12px;background:none;color:#C7C7CC;'
+                + 'border:1px solid #E5E7EB;border-radius:6px;cursor:pointer;" '
+                + 'onclick="hideCourseById(' + c.courseId + ')">下架</button>';
+        } else {
+            // 已下架课程：只有上架和移除按钮，上架始终可用（不排课直接上架）
+            html += '<button style="padding:4px 12px;font-size:12px;background:#0A84FF;color:#fff;'
+                + 'border:none;border-radius:6px;cursor:pointer;" '
+                + 'onclick="unhideCourseDirect(' + c.courseId + ')">上架</button>';
+            html += '<button style="padding:4px 12px;font-size:12px;background:none;color:#FF3B30;'
+                + 'border:1px solid #FF3B30;border-radius:6px;cursor:pointer;" '
+                + 'onclick="removeCourseById(' + c.courseId + ')">移除课程</button>';
+        }
+        html += '</div>';
+        html += '</div>';
+
+        html += '</div>';
+        html += '</div>';  // 关闭最外层 .card div
+        // 验证 div 配对
+        const openCount = (html.match(/<div/g) || []).length;
+        const closeCount = (html.match(/<\/div>/g) || []).length;
+        if (openCount !== closeCount) {
+            console.error('⚠️ 课程卡片 div 不匹配！courseId=' + c.courseId + ', 课程名=' + c.courseName
+                + ', 打开=' + openCount + ', 关闭=' + closeCount + ', 差值=' + (openCount - closeCount));
+        }
+        return html;
+    }
+
+    // 通过 ID 获取课程名和班级名
+    function getCourseName(courseId) {
+        return (window._courseNameMap && window._courseNameMap[courseId]) || '';
+    }
+    function getClassName(classId) {
+        return (window._classNameMap && window._classNameMap[classId]) || '';
+    }
+
+    function openSchedulePlannerById(courseId, classId, scheduled) {
+        const courseName = getCourseName(courseId);
+        const className = getClassName(classId);
+        openSchedulePlanner(courseName, classId, className, courseId, scheduled);
+    }
+    function hideCourseById(courseId) {
+        hideCourse(getCourseName(courseId));
+    }
+    function removeCourseById(courseId) {
+        removeCourse(getCourseName(courseId));
+    }
+
+    /** 已下架课程直接上架（不排课） */
+    async function unhideCourseDirect(courseId) {
+        const courseName = getCourseName(courseId);
+        if (!confirm('确定上架「' + courseName + '」？\n\n上架后课程将出现在"在线课程"中，您可以在线课程中为各班级手动排课。')) return;
+        try {
+            const res = await fetch(API + '/api/schedule/import/unhide', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courseName: courseName, slots: [] })
+            });
+            const data = await res.json();
+            if (data.error) { alert(data.error); } else { loadCourses(); }
+        } catch(e) { alert('操作失败'); }
+    }
+
+    /** HTML 转义（防止课程名中的特殊字符破坏 DOM） */
+    function escHtml(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    /** JS 字符串转义（用于 onclick 属性中传递课程名，HTML属性中单引号需转&#39;） */
+    function escJs(str) {
+        return String(str).replace(/\\/g, '\\\\').replace(/'/g, "&#39;").replace(/"/g, '&quot;');
+    }
+
+    async function hideCourse(name) {
+        if (!confirm('确定下架「' + name + '」？\n\n下架后该课程将从学生课表中移除，不再显示。')) return;
+        try {
+            await fetch(API + '/api/schedule/import/hide', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courseName: name })
+            });
+            loadCourses();
+        } catch (e) {
+            alert('操作失败');
+        }
+    }
+
+    async function removeCourse(name) {
+        // 自定义弹窗
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#fff;border-radius:14px;padding:28px 32px;width:420px;box-shadow:0 4px 24px rgba(0,0,0,0.12);text-align:center;">'
+            + '<div style="font-size:40px;margin-bottom:12px;">⚠️</div>'
+            + '<h3 style="font-size:17px;font-weight:600;color:#1D1D1F;margin-bottom:8px;">移除课程</h3>'
+            + '<p style="font-size:14px;color:#86868B;margin-bottom:8px;">确定要移除「<strong style="color:#1D1D1F;">' + escHtml(name) + '</strong>」吗？</p>'
+            + '<p style="font-size:12px;color:#FF3B30;margin-bottom:20px;">此操作将从数据库中删除该课程及其相关数据，不可恢复。</p>'
+            + '<div style="display:flex;gap:12px;justify-content:center;">'
+            + '<button id="btnRemoveCancel" style="padding:8px 28px;border-radius:8px;border:1px solid #E5E7EB;background:#fff;color:#1D1D1F;font-size:14px;cursor:pointer;">取消</button>'
+            + '<button id="btnRemoveConfirm" style="padding:8px 28px;border-radius:8px;background:#FF3B30;color:#fff;border:none;font-size:14px;cursor:pointer;">确认</button>'
+            + '</div></div>';
+        document.body.appendChild(overlay);
+
+        // 取消按钮
+        document.getElementById('btnRemoveCancel').onclick = function() { overlay.remove(); };
+        // 点击遮罩关闭
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+        // 确认按钮
+        document.getElementById('btnRemoveConfirm').onclick = async function() {
+            overlay.remove();
+            try {
+                const res = await fetch(API + '/api/schedule/import/remove', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ courseName: name })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    loadCourses();
+                }
+            } catch (e) {
+                alert('操作失败');
+            }
+        };
+    }
+
+    // ===== 排课弹窗（课程表选择空位）=====
+    // 课时计算：1个大节时段(08:30-09:55) = 2课时
+    const PERIOD_CREDIT = 2; // 每个空位代表2课时
+
+    let schedulePlannerState = {
+        courseName: '', classId: null, className: '', courseId: null,
+        totalCredit: 2, remainingCredit: 2, selectedSlots: [], existingCourses: [],
+        currentWeek: 1
+    };
+
+    // 计算当前教学周
+    function getCurrentTeachWeek() {
+        const startDate = new Date(2026, 1, 16);
+        const now = new Date();
+        const diffDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+        return Math.max(1, Math.min(18, Math.ceil(diffDays / 7)));
+    }
+
+    /** 打开排课弹窗（scheduled: true=已排课可修改，false=未排课） */
+    async function openSchedulePlanner(courseName, classId, className, courseId, scheduled) {
+        // onclick 传递的 boolean 会变成字符串，需要显式转换
+        scheduled = scheduled === true || scheduled === 'true';
+        let totalCredit = 2;
+        if (window._allCourses) {
+            const course = window._allCourses.find(c => c.courseId === courseId);
+            if (course && course.credit) totalCredit = parseInt(course.credit);
+        }
+        const curWeek = getCurrentTeachWeek();
+
+        let selectedSlots = [];
+        let usedCredit = 0;
+
+        // 如果已排课，加载已有排课信息（week=0 查所有周）
+        if (scheduled) {
+            try {
+                const res = await fetch(API + '/api/schedule/teacher/class-schedule?classId='
+                    + classId + '&week=0', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                // 找到该课程的已有记录，按 (dayOfWeek, startNode) 去重（多个学生会有重复记录）
+                const seen = {};
+                (data.schedules || [])
+                    .filter(s => s.course_name === courseName && s.day_of_week > 0)
+                    .forEach(s => {
+                        const key = s.day_of_week + '-' + s.start_node;
+                        if (seen[key]) return; // 去重
+                        seen[key] = true;
+                        let weekNum = curWeek;
+                        try {
+                            const w = JSON.parse(s.weeks || '[]');
+                            if (w.length > 0) weekNum = w[0];
+                        } catch(e) {}
+                        selectedSlots.push({
+                            week: weekNum, dayOfWeek: s.day_of_week, startNode: s.start_node,
+                            startTime: s.start_time, endTime: s.end_time,
+                            credit: s.step || 2, step: s.step || 2,
+                            classroom: s.classroom || '', semester: s.semester || '2025-2026-2',
+                            weeks: s.weeks || '[' + weekNum + ']'
+                        });
+                    });
+                usedCredit = selectedSlots.reduce((sum, s) => sum + (s.credit || 2), 0);
+            } catch(e) {}
+        }
+
+        schedulePlannerState = {
+            courseName, classId, className, courseId,
+            totalCredit, remainingCredit: totalCredit - usedCredit,
+            selectedSlots, existingCourses: [],
+            currentWeek: curWeek, scheduled: scheduled || false
+        };
+
+        const overlay = document.createElement('div');
+        overlay.id = 'plannerOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div id="plannerDialog" style="background:#fff;border-radius:14px;width:95%;max-width:1000px;max-height:90vh;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.18);display:flex;flex-direction:column;">'
+            + '<div id="plannerHeader" style="padding:16px 24px;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">'
+            + '<div><h3 style="font-size:16px;font-weight:600;color:#1D1D1F;">' + (scheduled ? '📝 修改排课' : '📅 首次排课') + ' · ' + escHtml(courseName) + ' · ' + escHtml(className) + '</h3>'
+            + '<p style="font-size:12px;color:#86868B;margin-top:2px;">总课时：<b style="color:#0A84FF;">' + totalCredit + '</b> · 剩余：<b id="plannerRemain" style="color:#FF9500;">' + (totalCredit - usedCredit) + '</b> 课时 · 已选：<b id="plannerSelCount">' + selectedSlots.length + '</b> 个时段</p></div>'
+            + '<div style="display:flex;gap:8px;">'
+            + '<button onclick="closePlanner()" style="padding:6px 16px;border-radius:8px;border:1px solid #E5E7EB;background:#fff;color:#1D1D1F;font-size:13px;cursor:pointer;">取消</button>'
+            + '<button id="btnPlannerConfirm" onclick="confirmPlanner()" style="padding:6px 16px;border-radius:8px;background:#0A84FF;color:#fff;border:none;font-size:13px;cursor:pointer;">确定排课</button>'
+            + '</div></div>'
+            + '<div id="plannerBody" style="flex:1;overflow:auto;padding:16px 24px;">'
+            + '<div style="text-align:center;padding:40px;color:#86868B;">加载中...</div>'
+            + '</div></div>';
+        document.body.appendChild(overlay);
+
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) closePlanner(); });
+        await loadPlannerWeek(schedulePlannerState.currentWeek);
+    }
+
+    function closePlanner() {
+        const overlay = document.getElementById('plannerOverlay');
+        if (overlay) overlay.remove();
+    }
+
+    /** 加载指定周的班级课表 */
+    async function loadPlannerWeek(week) {
+        schedulePlannerState.currentWeek = week;
+        const body = document.getElementById('plannerBody');
+        body.innerHTML = '<div style="text-align:center;padding:40px;color:#86868B;">加载中...</div>';
+        try {
+            const res = await fetch(API + '/api/schedule/teacher/class-schedule?classId='
+                + schedulePlannerState.classId + '&week=' + week, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const data = await res.json();
+            // 按 (course_name, day_of_week, start_node) 去重
+            const seen = {};
+            const uniqueSchedules = [];
+            (data.schedules || []).forEach(s => {
+                const key = s.course_name + '-' + s.day_of_week + '-' + s.start_node;
+                if (!seen[key]) { seen[key] = true; uniqueSchedules.push(s); }
+            });
+            schedulePlannerState.existingCourses = uniqueSchedules;
+            renderPlannerTable();
+        } catch (e) {
+            body.innerHTML = '<div style="text-align:center;padding:40px;color:#FF3B30;">加载失败</div>';
+        }
+    }
+
+    /** 渲染课程表（带周选择器，教师自选周数+空位） */
+    function renderPlannerTable() {
+        const body = document.getElementById('plannerBody');
+        const state = schedulePlannerState;
+        const existing = state.existingCourses;
+        const selected = state.selectedSlots;
+        const week = state.currentWeek;
+        const curWeek = getCurrentTeachWeek();
+        const usedCredit = selected.reduce((sum, s) => sum + (s.credit || 2), 0);
+
+        const periods = [
+            { node: 1, start: '08:30', end: '09:55' },
+            { node: 2, start: '10:10', end: '11:35' },
+            { node: 3, start: '11:40', end: '12:20' },
+            { node: 4, start: '14:20', end: '15:45' },
+            { node: 5, start: '16:00', end: '17:25' },
+            { node: 6, start: '19:10', end: '21:30' }
+        ];
+        const days = ['周一','周二','周三','周四','周五','周六','周日'];
+
+        let html = '';
+
+        // 周选择器（从当前周开始）
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap;">';
+        html += '<span style="font-size:13px;color:#86868B;margin-right:6px;">选择周次：</span>';
+        for (let w = curWeek; w <= 18; w++) {
+            const isActive = w === week;
+            const hasSelected = selected.some(s => s.week === w);
+            const bg = isActive ? '#0A84FF' : (hasSelected ? '#E8F8ED' : '#F5F5F7');
+            const tc = isActive ? '#fff' : (hasSelected ? '#34C759' : '#86868B');
+            html += '<span style="display:inline-flex;align-items:center;justify-content:center;'
+                + 'width:34px;height:34px;border-radius:50%;font-size:12px;cursor:pointer;transition:all 0.15s;'
+                + 'background:' + bg + ';color:' + tc + ';font-weight:' + (isActive||hasSelected?'600':'400') + ';" '
+                + 'onclick="loadPlannerWeek(' + w + ')">' + w + '</span>';
+        }
+        html += '</div>';
+
+        // 课时状态条
+        const remaining = state.totalCredit - usedCredit;
+        html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 14px;background:#F5F5F7;border-radius:8px;font-size:13px;">';
+        html += '已选：<b style="color:#34C759;">' + selected.length + '</b> 个时段（<b style="color:#34C759;">' + usedCredit + '</b> 课时） | ';
+        html += '剩余：<b style="color:#FF9500;">' + remaining + '</b> 课时 | ';
+        html += '当前：第 <b>' + week + '</b> 周';
+        html += '</div>';
+
+        // 已选列表
+        if (selected.length > 0) {
+            html += '<div style="background:#E8F8ED;padding:8px 14px;border-radius:8px;margin-bottom:12px;font-size:12px;color:#34C759;">';
+            html += '✅ ' + selected.map(s => '第' + s.week + '周·周' + s.dayOfWeek + ' ' + s.startTime + '-' + s.endTime + (s.credit === 1 ? '(1课时)' : '')).join('；');
+            html += '</div>';
+        }
+
+        // 课程表
+        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+        html += '<thead><tr style="background:#F5F5F7;">';
+        html += '<th style="padding:8px;font-size:12px;color:#86868B;font-weight:500;width:70px;">节次</th>';
+        for (let d = 0; d < 7; d++) html += '<th style="padding:8px;font-size:12px;color:#86868B;font-weight:500;">' + days[d] + '</th>';
+        html += '</tr></thead><tbody>';
+
+        const occupiedMap = {}, occupiedInfo = {}, ownCourseMap = {};
+        existing.forEach(c => {
+            const k = c.day_of_week + '-' + c.start_node;
+            // 判断是否为本门课程（记录对应周次）
+            if (c.course_name === state.courseName) {
+                let w = 1;
+                try { const arr = JSON.parse(c.weeks || '[1]'); if (arr.length > 0) w = arr[0]; } catch(e) {}
+                ownCourseMap[k] = { week: w };
+            } else {
+                occupiedMap[k] = true;
+                occupiedInfo[k] = c;
+            }
+        });
+
+        for (let p = 0; p < periods.length; p++) {
+            const period = periods[p];
+            html += '<tr>';
+            html += '<td style="padding:6px 4px;font-size:11px;color:#86868B;text-align:center;background:#F5F5F7;border-bottom:1px solid #E5E7EB;">'
+                + period.start + '<br/>' + period.end + '</td>';
+
+            for (let d = 0; d < 7; d++) {
+                const day = d + 1;
+                const key = day + '-' + period.node;
+                const isOccupied = occupiedMap[key];
+                const occInfo = occupiedInfo[key];
+                const ownInfo = ownCourseMap[key];
+                const isOwnCourse = !!ownInfo;
+
+                let cellStyle, cellContent, onclick;
+
+                // 检查当前周是否已选中
+                const sel2 = selected.find(s => s.week === week && s.dayOfWeek === day && s.startNode === period.node && s.credit !== 1);
+                const sel1 = selected.find(s => s.week === week && s.dayOfWeek === day && s.startNode === period.node && s.credit === 1);
+                // 检查本门课程在其他周是否有选中（从 selectedSlots 中查找，不限当前周）
+                const otherWeekSlot = !sel2 && !sel1 && isOwnCourse
+                    ? selected.find(s => s.dayOfWeek === day && s.startNode === period.node) : null;
+
+                if (sel2) {
+                    // 当前周已选中（2课时）— 绿色，可点击取消
+                    cellStyle = 'background:#34C759;border:2px solid #28A745;border-radius:4px;cursor:pointer;';
+                    cellContent = '<div style="font-size:11px;color:#fff;font-weight:600;text-align:center;">✓ 第' + week + '周<br/>2课时</div>';
+                    onclick = 'onclick="removeSlotByKey(' + day + ',' + period.node + ',' + week + ')"';
+                } else if (sel1) {
+                    // 当前周已选中（1课时）— 橙色，可点击取消
+                    cellStyle = 'background:#FF9500;border:2px solid #E68600;border-radius:4px;cursor:pointer;';
+                    cellContent = '<div style="font-size:11px;color:#fff;font-weight:600;text-align:center;">✓ 第' + sel1.subNode + '节</div>';
+                    onclick = 'onclick="removeSlotByKey(' + day + ',' + period.node + ',' + week + ')"';
+                } else if (otherWeekSlot) {
+                    // 本门课程在其他周已排 — 灰色高亮，可点击取消
+                    cellStyle = 'background:#E5E7EB;border:2px solid #C7C7CC;border-radius:4px;cursor:pointer;';
+                    cellContent = '<div style="font-size:10px;color:#86868B;font-weight:600;text-align:center;">✓ 第' + otherWeekSlot.week + '周<br/>' + (otherWeekSlot.credit||2) + '课时</div>';
+                    onclick = 'onclick="removeSlotByKey(' + day + ',' + period.node + ',' + otherWeekSlot.week + ')"';
+                } else if (isOwnCourse) {
+                    // 本门课程已排（从 existingCourses 获取周次信息）
+                    const ownWeek = ownInfo.week;
+                    const slotInSelected = selected.find(s => s.dayOfWeek === day && s.startNode === period.node);
+                    const slotWeek = slotInSelected ? slotInSelected.week : ownWeek;
+                    cellStyle = 'background:#E5E7EB;border:2px solid #C7C7CC;border-radius:4px;cursor:pointer;';
+                    cellContent = '<div style="font-size:10px;color:#86868B;font-weight:600;text-align:center;">本课程<br/>第' + slotWeek + '周</div>';
+                    onclick = 'onclick="removeSlotByKey(' + day + ',' + period.node + ',' + slotWeek + ')"';
+                } else if (isOccupied) {
+                    // 其他课程占用 — 浅紫色，不可操作
+                    cellStyle = 'background:#F0F4FF;border:1px solid #D8E4FF;border-radius:4px;';
+                    cellContent = '<div style="font-size:10px;color:#3A6BD5;font-weight:500;text-align:center;">'
+                        + (occInfo.course_name.length > 8 ? occInfo.course_name.substring(0,8)+'...' : occInfo.course_name)
+                        + '<br/><span style="color:#7BA4E0;">已占用</span></div>';
+                    onclick = '';
+                } else {
+                    // 空位：可点击
+                    cellStyle = 'background:#FAFAFA;border:2px dashed #D1D1D6;border-radius:4px;cursor:pointer;transition:all 0.15s;';
+                    cellContent = '<div style="font-size:10px;color:#C7C7CC;text-align:center;">空</div>';
+                    onclick = 'onclick="toggleSlot(' + day + ',' + period.node + ',\'' + period.start + '\',\'' + period.end + '\',' + week + ')" '
+                        + 'onmouseover="this.style.background=\'#E8F8ED\';this.style.borderColor=\'#34C759\'" '
+                        + 'onmouseout="this.style.background=\'#FAFAFA\';this.style.borderColor=\'#D1D1D6\'"';
+                }
+
+                html += '<td style="padding:3px;height:52px;border-bottom:1px solid #E5E7EB;" ' + onclick + '>'
+                    + '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;' + cellStyle + '">'
+                    + cellContent + '</div></td>';
+            }
+            html += '</tr>';
+            if (period.node === 3) {
+                html += '<tr><td colspan="8" style="padding:4px;text-align:center;font-size:10px;color:#FF9500;background:#FFF8F0;">'
+                    + '——— 午休 12:20 - 14:20 ———</td></tr>';
+            }
+        }
+        html += '</tbody></table>';
+        body.innerHTML = html;
+        // 更新头部计数器
+        const selEl = document.getElementById('plannerSelCount');
+        const remEl = document.getElementById('plannerRemain');
+        if (selEl) selEl.textContent = selected.length;
+        if (remEl) remEl.textContent = state.totalCredit - usedCredit;
+    }
+
+    /** 切换空位选中状态（支持单课时选择） */
+    function toggleSlot(day, startNode, startTime, endTime, week) {
+        const state = schedulePlannerState;
+        // 检查该位置是否被任何在线课程占用（包括本门课程已排的）
+        const isOccupied = state.existingCourses.some(c =>
+            c.day_of_week === day && c.start_node === startNode);
+        if (isOccupied) return;
+
+        // 检查本门课程是否已在该位置选中（不限周次，防止重复添加）
+        const anyWeekIdx = state.selectedSlots.findIndex(s => s.dayOfWeek === day && s.startNode === startNode);
+        if (anyWeekIdx >= 0) {
+            // 如果已经在其他周选中，点击空位时允许重新在当前周选中
+            // 但如果当前周已有选中，则取消
+            const curWeekIdx = state.selectedSlots.findIndex(s => s.week === week && s.dayOfWeek === day && s.startNode === startNode);
+            if (curWeekIdx >= 0) {
+                state.selectedSlots.splice(curWeekIdx, 1);
+                recalcRemaining();
+                renderPlannerTable();
+                return;
+            }
+        }
+
+        const usedCredit = state.selectedSlots.reduce((sum, s) => sum + (s.credit || 2), 0);
+        const remaining = state.totalCredit - usedCredit;
+
+        if (remaining <= 0) {
+            alert('课时已用完！该课程只有 ' + state.totalCredit + ' 课时。');
+            return;
+        }
+
+        // 第5节（11:40-12:20，node=3）只有40分钟=1课时，直接选
+        if (startNode === 3) {
+            state.selectedSlots.push({
+                week: week, dayOfWeek: day, startNode: startNode, step: 1,
+                startTime: startTime, endTime: endTime, credit: 1,
+                classroom: '', semester: '2025-2026-2',
+                weeks: '[' + week + ']', subNode: 5
+            });
+            recalcRemaining();
+            renderPlannerTable();
+            return;
+        }
+
+        // 剩余课时≥2：直接选完整空位（2课时）
+        if (remaining >= 2) {
+            state.selectedSlots.push({
+                week: week, dayOfWeek: day, startNode: startNode, step: 2,
+                startTime: startTime, endTime: endTime, credit: 2,
+                classroom: '', semester: '2025-2026-2',
+                weeks: '[' + week + ']'
+            });
+            recalcRemaining();
+            renderPlannerTable();
+            return;
+        }
+
+        // 剩余1课时：弹出选择具体节次
+        showSubNodePicker(day, startNode, startTime, endTime, week);
+    }
+
+    /** 剩余1课时时，弹出选择第几节 */
+    function showSubNodePicker(day, startNode, startTime, endTime, week) {
+        const state = schedulePlannerState;
+        const subNodes = getSubNodes(startNode);
+
+        const overlay = document.createElement('div');
+        overlay.id = 'subNodePicker';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:2000;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px 28px;box-shadow:0 4px 24px rgba(0,0,0,0.15);text-align:center;max-width:360px;">'
+            + '<h4 style="font-size:15px;font-weight:600;margin-bottom:6px;">选择节次（剩余1课时）</h4>'
+            + '<p style="font-size:12px;color:#86868B;margin-bottom:16px;">第' + week + '周 · 周' + day + ' · ' + startTime + '-' + endTime + '</p>'
+            + '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px;">'
+            + subNodes.map(sn => '<button style="padding:8px 20px;border-radius:8px;background:#0A84FF;color:#fff;border:none;font-size:13px;cursor:pointer;" '
+                + 'onclick="pickSubNode(' + day + ',' + startNode + ',' + week + ',' + sn.node + ')">第' + sn.label + '节</button>').join('')
+            + '</div>'
+            + '<button style="padding:6px 16px;border-radius:8px;border:1px solid #E5E7EB;background:#fff;color:#86868B;font-size:12px;cursor:pointer;" '
+            + 'onclick="document.getElementById(\'subNodePicker\').remove()">取消</button>'
+            + '</div>';
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    /** 根据 startNode 返回对应的小节 */
+    function getSubNodes(startNode) {
+        const map = {
+            1: [{ node: 1, label: '1' }, { node: 2, label: '2' }],   // 08:30-09:55
+            2: [{ node: 3, label: '3' }, { node: 4, label: '4' }],   // 10:10-11:35
+            4: [{ node: 6, label: '6' }, { node: 7, label: '7' }],   // 14:20-15:45
+            5: [{ node: 8, label: '8' }, { node: 9, label: '9' }],   // 16:00-17:25
+            6: [{ node: 10, label: '10' }, { node: 11, label: '11' }] // 19:10-21:30
+        };
+        return map[startNode] || [{ node: startNode, label: String(startNode) }];
+    }
+
+    /** 选择具体小节 */
+    function pickSubNode(day, startNode, week, subNode) {
+        document.getElementById('subNodePicker').remove();
+        const state = schedulePlannerState;
+        const periodInfo = getPeriodByNode(startNode);
+
+        state.selectedSlots.push({
+            week: week, dayOfWeek: day, startNode: startNode, step: 1,
+            startTime: periodInfo.start, endTime: periodInfo.end, credit: 1,
+            classroom: '', semester: '2025-2026-2',
+            weeks: '[' + week + ']', subNode: subNode
+        });
+        recalcRemaining();
+        renderPlannerTable();
+    }
+
+    function getPeriodByNode(startNode) {
+        const map = {
+            1: { start: '08:30', end: '09:55' }, 2: { start: '10:10', end: '11:35' },
+            3: { start: '11:40', end: '12:20' }, 4: { start: '14:20', end: '15:45' },
+            5: { start: '16:00', end: '17:25' }, 6: { start: '19:10', end: '21:30' }
+        };
+        return map[startNode] || { start: '08:30', end: '09:55' };
+    }
+
+    /** 移除已选空位 */
+    function removeSlot(day, startNode, week) {
+        removeSlotByKey(day, startNode, week);
+    }
+    function removeSlotByKey(day, startNode, week) {
+        const idx = schedulePlannerState.selectedSlots.findIndex(s => s.week === week && s.dayOfWeek === day && s.startNode === startNode);
+        if (idx >= 0) {
+            schedulePlannerState.selectedSlots.splice(idx, 1);
+            recalcRemaining();
+            renderPlannerTable();
+        }
+    }
+
+    /** 重新计算剩余课时 */
+    function recalcRemaining() {
+        const state = schedulePlannerState;
+        const usedCredit = state.selectedSlots.reduce((sum, s) => sum + (s.credit || 2), 0);
+        state.remainingCredit = state.totalCredit - usedCredit;
+    }
+
+    /** 确认排课（在线课程中排课） */
+    async function confirmPlanner() {
+        const state = schedulePlannerState;
+
+        // 没有选空位
+        if (state.selectedSlots.length === 0) {
+            // 已排课的班级：确认清除排课，恢复灰色标签
+            if (state.scheduled) {
+                if (!confirm('确定清除「' + state.courseName + '」在「' + state.className + '」的排课？\n该班级将变为"未排课"状态。')) return;
+                try {
+                    const res = await fetch(API + '/api/schedule/import/clear-class-schedule', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ courseName: state.courseName, classId: state.classId })
+                    });
+                    const data = await res.json();
+                    if (data.error) { alert(data.error); } else {
+                        updateClazzTag(state.courseId, state.classId, false);
+                        // 刷新课程列表，确保排课按钮状态更新
+                        loadCourses();
+                    }
+                } catch(e) { alert('操作失败'); }
+                closePlanner();
+                return;
+            }
+            // 未排课的班级：直接关闭，不做任何改变
+            closePlanner();
+            return;
+        }
+
+        // 选了空位：提交排课
+        const mode = state.scheduled ? '更新' : '设置';
+        const usedCr = state.selectedSlots.reduce((sum, s) => sum + (s.credit || 2), 0);
+        const remainCr = state.totalCredit - usedCr;
+        const remainMsg = remainCr > 0 ? '\n剩余 ' + remainCr + ' 课时未排。' : '\n课时已排满。';
+        if (!confirm('确定' + mode + '「' + state.courseName + '」在「' + state.className + '」的排课？\n已选 ' + state.selectedSlots.length + ' 个时段（' + usedCr + ' 课时）。' + remainMsg)) return;
+        try {
+            const res = await fetch(API + '/api/schedule/import/unhide', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courseName: state.courseName, slots: state.selectedSlots, classId: state.classId })
+            });
+            const data = await res.json();
+            if (data.error) { alert(data.error); } else {
+                updateClazzTag(state.courseId, state.classId, true);
+                loadCourses();
+            }
+        } catch(e) { alert('操作失败'); }
+        closePlanner();
+    }
+
+    /** 联动更新卡片上的班级标签为蓝色✔ */
+    function updateClazzTag(courseId, classId, scheduled) {
+        const tagId = 'clazzTag_' + courseId + '_' + classId;
+        const tagEl = document.getElementById(tagId);
+        if (!tagEl) return;
+        if (scheduled) {
+            tagEl.style.background = '#E8F0FE';
+            tagEl.style.color = '#0A84FF';
+            tagEl.style.border = '1px solid #B8D4FE';
+            // 更新文字中的图标
+            const text = tagEl.textContent;
+            if (text.startsWith('○')) {
+                tagEl.textContent = '✔' + text.substring(1);
+            }
+        } else {
+            tagEl.style.background = '#F5F5F7';
+            tagEl.style.color = '#86868B';
+            tagEl.style.border = '1px solid #E5E7EB';
+            const text = tagEl.textContent;
+            if (text.startsWith('✔')) {
+                tagEl.textContent = '○' + text.substring(1);
+            }
+        }
+    }
+
+    // ===== 导入课表弹窗 =====
+    let importPreviewData = null;  // 暂存预览数据，避免 HTML 属性注入问题
+
+    function showImportDialog() {
+        importPreviewData = null;
+        const overlay = document.createElement('div');
+        overlay.id = 'importOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `<div style="background:#fff;border-radius:14px;padding:28px;width:620px;max-height:80vh;overflow:auto;box-shadow:0 4px 24px rgba(0,0,0,0.12);">
+            <h3 style="font-size:17px;font-weight:600;margin-bottom:16px;color:#1D1D1F;">📥 导入课表</h3>
+            <input type="file" id="importFile" accept=".xlsx,.xls,.pdf,.doc,.docx,.txt,.jpg,.png" style="display:block;width:100%;padding:10px;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;margin-bottom:12px;"/>
+            <div id="importResult" style="margin-top:12px;font-size:13px;"></div>
+            <div id="importBtnArea" style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="closeImport()" style="padding:8px 20px;border-radius:8px;border:1px solid #E5E7EB;background:#fff;color:#1D1D1F;font-size:14px;cursor:pointer;">取消</button>
+                <button class="btn btn-primary" id="btnDoImport" onclick="doImport()" style="padding:8px 20px;border-radius:8px;background:#0A84FF;color:#fff;border:none;font-size:14px;cursor:pointer;">开始导入</button>
+            </div>
+        </div>`;
+        document.body.appendChild(overlay);
+    }
+
+    function closeImport() {
+        const overlay = document.getElementById('importOverlay');
+        if (overlay) overlay.remove();
+    }
+
+    async function doImport() {
+        const file = document.getElementById('importFile').files[0];
+        if (!file) { alert('请选择文件'); return; }
+
+        const result = document.getElementById('importResult');
+        const btn = document.getElementById('btnDoImport');
+        result.innerHTML = '<span style="color:#0A84FF;">⏳ AI 正在分析课表...</span>';
+        btn.style.display = 'none';  // 隐藏"开始导入"按钮
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch(API + '/api/schedule/import/preview', {
+                method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: formData
+            });
+            const data = await res.json();
+
+            if (data.error) { result.innerHTML = '<span style="color:#FF3B30;">' + data.error + '</span>'; btn.style.display = 'inline-block'; return; }
+
+            let html = '';
+            if (data.errors && data.errors.length > 0) {
+                html += '<div style="color:#FF3B30;margin-bottom:8px;font-weight:500;">❌ ' + data.errors.length + ' 条无法导入（信息不完整）：</div>';
+                data.errors.forEach(e => {
+                    html += '<div style="background:#FFF5F5;padding:8px 12px;margin:4px 0;border-radius:6px;">';
+                    html += '第' + e.row + '行《' + (e.courseName||'未知') + '》：' + (e.errors||[]).join('、');
+                    html += '</div>';
+                });
+            }
+            if (data.preview && data.preview.length > 0) {
+                importPreviewData = data.preview;
+                // 提取课程名（去重）用于设置课时
+                const courseNames = [...new Set(data.preview.map(p => p.courseName))];
+
+                html += '<div style="color:#34C759;margin:12px 0 8px;font-weight:500;">✅ ' + data.preview.length + ' 条可导入：</div>';
+
+                // 课时设置区域
+                html += '<div style="background:#F5F5F7;padding:12px 14px;border-radius:8px;margin-bottom:12px;">';
+                html += '<span style="font-size:12px;color:#86868B;">📝 设置课程总课时（1个空位=2课时）：</span>';
+                courseNames.forEach(cn => {
+                    html += '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">';
+                    html += '<span style="font-size:13px;font-weight:500;min-width:120px;">' + escHtml(cn) + '</span>';
+                    html += '<input type="number" id="creditInput_' + escJs(cn).replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_') + '" value="2" min="1" max="20" '
+                        + 'style="width:60px;padding:4px 8px;border:1px solid #E5E7EB;border-radius:6px;font-size:13px;text-align:center;"/>';
+                    html += '<span style="font-size:11px;color:#86868B;">课时</span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+
+                html += '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:12px;"><thead><tr style="background:#F5F5F7;">';
+                html += '<th style="padding:8px;text-align:left;border-bottom:1px solid #E5E7EB;">课程</th><th style="padding:8px;text-align:left;border-bottom:1px solid #E5E7EB;">班级</th><th style="padding:8px;text-align:left;border-bottom:1px solid #E5E7EB;">周几</th><th style="padding:8px;text-align:left;border-bottom:1px solid #E5E7EB;">时间</th><th style="padding:8px;text-align:left;border-bottom:1px solid #E5E7EB;">教室</th></tr></thead><tbody>';
+                data.preview.forEach(p => {
+                    html += '<tr><td style="padding:6px 8px;border-bottom:1px solid #F5F5F7;">' + escHtml(p.courseName||'') + '</td>';
+                    html += '<td style="padding:6px 8px;border-bottom:1px solid #F5F5F7;">' + escHtml(p.className||'') + '</td>';
+                    html += '<td style="padding:6px 8px;border-bottom:1px solid #F5F5F7;">周' + p.dayOfWeek + '</td>';
+                    html += '<td style="padding:6px 8px;border-bottom:1px solid #F5F5F7;">' + escHtml(p.startTime||'') + '-' + escHtml(p.endTime||'') + '</td>';
+                    html += '<td style="padding:6px 8px;border-bottom:1px solid #F5F5F7;">' + escHtml(p.classroom||'') + '</td></tr>';
+                });
+                html += '</tbody></table>';
+                const btnArea = document.getElementById('importBtnArea');
+                btnArea.innerHTML = '<button class="btn btn-outline" onclick="closeImport()" style="padding:8px 20px;border-radius:8px;border:1px solid #E5E7EB;background:#fff;color:#1D1D1F;font-size:14px;cursor:pointer;">取消</button>'
+                    + '<button class="btn btn-primary" onclick="confirmImport()" style="padding:8px 20px;border-radius:8px;background:#0A84FF;color:#fff;border:none;font-size:14px;cursor:pointer;">✅ 确认导入 ' + data.preview.length + ' 条</button>';
+            } else {
+                // 没有可导入数据，恢复按钮
+                btn.style.display = 'inline-block';
+            }
+
+            if (!html) {
+                html = '<div style="color:#FF9500;padding:16px 0;">⚠️ AI 未能识别到课表数据。请确认文件中包含课程名、班级、时间等列。';
+                if (data.raw) html += '<br/><small style="color:#86868B;">AI 回复：' + data.raw + '</small>';
+                html += '</div>';
+            }
+
+            result.innerHTML = html;
+        } catch (e) {
+            btn.style.display = 'inline-block';
+            result.innerHTML = '<span style="color:#FF3B30;">网络连接失败</span>';
+        }
+    }
+
+    async function confirmImport() {
+        if (!importPreviewData || importPreviewData.length === 0) { alert('没有可导入的数据'); return; }
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = '导入中...';
+
+        // 读取教师设置的课时，注入到预览数据中
+        const courseNames = [...new Set(importPreviewData.map(p => p.courseName))];
+        const creditMap = {};
+        courseNames.forEach(cn => {
+            const inputId = 'creditInput_' + escJs(cn).replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_');
+            const inputEl = document.getElementById(inputId);
+            if (inputEl) creditMap[cn] = parseInt(inputEl.value) || 2;
+        });
+        // 给每条数据加上 credit
+        const finalData = importPreviewData.map(p => ({ ...p, credit: creditMap[p.courseName] || 2 }));
+
+        const res = await fetch(API + '/api/schedule/import/confirm', {
+            method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify(finalData)
+        });
+        const data = await res.json();
+        let msg = '导入完成：成功 ' + (data.imported||0) + ' 条';
+        if (data.skipped > 0) {
+            msg += '，跳过 ' + data.skipped + ' 条';
+        }
+        msg += '\n\n所有课程已存入「已下架课程」，请手动上架。';
+        if (data.messages && data.messages.length > 0) {
+            msg += '\n\n' + data.messages.join('\n');
+        }
+        alert(msg);
+        closeImport();
+        loadCourses();
+    }
+
+    // ===== 学习统计 =====
+    let chartsInst = [];  // 图表实例引用
+
+    async function loadStats() {
+        const content = document.getElementById('pageContent');
+        content.innerHTML = '<div style="text-align:center;padding:60px;color:#86868B;">加载中...</div>';
+
+        // 先加载课程获取班级列表
+        try {
+            const res = await fetch(API + '/api/schedule/teacher/courses', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!res.ok) throw new Error();
+            const courses = await res.json();
+
+            // 收集所有班级
+            const classMap = new Map();
+            courses.forEach(c => {
+                (c.classes || []).forEach(cl => {
+                    if (!classMap.has(cl.classId)) {
+                        classMap.set(cl.classId, { id: cl.classId, name: cl.className, count: cl.studentCount });
+                    }
+                });
+            });
+            const classes = [...classMap.values()];
+
+            if (classes.length === 0) {
+                content.innerHTML = '<div style="text-align:center;padding:60px;color:#86868B;">暂无班级数据</div>';
+                return;
+            }
+
+            // 页面布局
+            let html = '<div class="welcome-card"><h2>📈 学习统计</h2><p>选择班级查看图谱，点击学生查看个人详情</p></div>';
+
+            // 班级选择器
+            html += '<div class="card" style="padding:16px 24px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">';
+            html += '<span style="font-size:14px;color:#86868B;">选择班级：</span>';
+            classes.forEach((cl, i) => {
+                html += `<button class="btn btn-sm" style="padding:6px 16px;" onclick="selectClass(${cl.id},'${cl.name}')">${cl.name}（${cl.count}人）</button>`;
+            });
+            html += '</div>';
+
+            // 班级图谱区
+            html += '<div id="classCharts" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">';
+            html += '<div class="card"><div class="card-title">🎯 班级专注排行</div><div class="chart-box" style="height:300px;"><canvas id="chartFocusRank"></canvas></div></div>';
+            html += '<div class="card"><div class="card-title">💬 各课程提问量</div><div class="chart-box" style="height:300px;"><canvas id="chartCourseQ"></canvas></div></div>';
+            html += '</div>';
+
+            // 个人图谱区
+            html += '<div id="studentCharts" style="display:none;">';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
+            html += '<div class="card"><div class="card-title">📈 7天专注趋势</div><div class="chart-box" style="height:280px;"><canvas id="chartStuTrend"></canvas></div></div>';
+            html += '<div class="card"><div class="card-title">🍩 课程提问占比</div><div class="chart-box" style="height:280px;"><canvas id="chartStuQ"></canvas></div></div>';
+            html += '</div>';
+            html += '<div id="stuSummary" class="card" style="margin-top:16px;padding:20px 24px;"></div>';
+            html += '</div>';
+
+            content.innerHTML = html;
+
+            // 默认选中第一个班级
+            if (classes.length > 0) selectClass(classes[0].id, classes[0].name);
+
+        } catch (e) {
+            content.innerHTML = '<div style="text-align:center;padding:60px;color:#FF3B30;">无法连接后端服务器</div>';
+        }
+    }
+
+    async function selectClass(classId, className) {
+        // 高亮选中的班级按钮
+        document.querySelectorAll('#pageContent .btn-sm').forEach(b => b.style.background = '#F5F5F7');
+        event.target.style.background = '#E8F0FE';
+
+        try {
+            const res = await fetch(API + '/api/teacher/class-stats/' + classId, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const data = await res.json();
+
+            // 清除旧图表
+            chartsInst.forEach(c => c.destroy());
+            chartsInst = [];
+
+            // 班级专注排行
+            const names = (data.focusRank || []).map(r => r.name);
+            const secs = (data.focusRank || []).map(r => Math.round((r.totalSeconds || 0) / 60));
+            const ctx1 = document.getElementById('chartFocusRank');
+            if (ctx1) chartsInst.push(new Chart(ctx1, {
+                type: 'bar', data: { labels: names, datasets: [{ data: secs, backgroundColor: '#0A84FF', borderRadius: 4 }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { title: { text: '分钟', display: true, color: '#86868B' }, ticks: { color: '#86868B' } },
+                              y: { ticks: { color: '#86868B', font: { size: 11 } } } }
+                }
+            }));
+
+            // 各课程提问量
+            const cNames = (data.courseQuestions || []).map(r => r.name.length > 8 ? r.name.slice(0,8)+'...' : r.name);
+            const cCounts = (data.courseQuestions || []).map(r => r.count);
+            const ctx2 = document.getElementById('chartCourseQ');
+            if (ctx2) chartsInst.push(new Chart(ctx2, {
+                type: 'bar', data: { labels: cNames, datasets: [{ data: cCounts,
+                    backgroundColor: ['#0A84FF','#34C759','#FF9500','#AF52DE','#FF3B30','#5AC8FA'] }] },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: '#86868B' } },
+                              x: { ticks: { color: '#86868B', font: { size: 11 } } } }
+                }
+            }));
+
+            // 给排行表里每个学生加点击事件
+            const studentList = document.getElementById('classCharts');
+            if (studentList && data.focusRank) {
+                let listHtml = '<div class="card" style="margin-top:16px;padding:16px 20px;"><div class="card-title">👤 点击学生名查看个人图谱</div>';
+                listHtml += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">';
+                (data.focusRank || []).forEach(s => {
+                    listHtml += `<span style="cursor:pointer;padding:6px 14px;background:#F5F5F7;border-radius:20px;font-size:13px;" 
+                        onclick="selectStudent(${s.id},'${s.name}')">${s.name}</span>`;
+                });
+                listHtml += '</div></div>';
+                studentList.insertAdjacentHTML('afterend', listHtml);
+            }
+
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function selectStudent(studentId, name) {
+        try {
+            const res = await fetch(API + '/api/teacher/student-stats/' + studentId, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const data = await res.json();
+
+            document.getElementById('studentCharts').style.display = 'block';
+
+            // 个人概要
+            const info = data.info || {};
+            document.getElementById('stuSummary').innerHTML = `
+                <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:center;">
+                    <div style="width:48px;height:48px;border-radius:50%;background:#0A84FF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;">${name.charAt(0)}</div>
+                    <div><strong style="font-size:17px;">${name}</strong> · ${info.studentNo || ''}</div>
+                    <div style="margin-left:auto;display:flex;gap:20px;text-align:center;">
+                        <div><div style="font-size:22px;font-weight:600;color:#0A84FF;">${data.totalFocusMinutes || 0}min</div><div style="font-size:11px;color:#86868B;">总专注</div></div>
+                        <div><div style="font-size:22px;font-weight:600;color:#34C759;">${data.loginDays || 0}天</div><div style="font-size:11px;color:#86868B;">登录天数</div></div>
+                        <div><div style="font-size:22px;font-weight:600;color:#86868B;">${data.classAvgMinutes || 0}min</div><div style="font-size:11px;color:#86868B;">班级人均</div></div>
+                    </div>
+                </div>`;
+
+            // 清除个人图表
+            chartsInst.forEach(c => c.destroy());
+            chartsInst = [];
+
+            // 7天趋势
+            const days = [];
+            const mins = [];
+            for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push((d.getMonth()+1)+'/'+d.getDate()); mins.push(0); }
+            (data.focusTrend || []).forEach(t => {
+                for (let i = 0; i < days.length; i++) {
+                    const ref = new Date(); ref.setDate(ref.getDate() - (6-i));
+                    const rs = ref.getFullYear()+'-'+String(ref.getMonth()+1).padStart(2,'0')+'-'+String(ref.getDate()).padStart(2,'0');
+                    if ((t.date||'').startsWith(rs)) mins[i] = Math.round(t.minutes || 0);
                 }
             });
+            const ctx3 = document.getElementById('chartStuTrend');
+            if (ctx3) chartsInst.push(new Chart(ctx3, { type: 'line', data: { labels: days, datasets: [{ data: mins, borderColor: '#0A84FF', backgroundColor: 'rgba(10,132,255,0.08)', borderWidth: 2, tension: 0.4, pointRadius: 3, fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { color: '#86868B', callback: v => v+'min' } }, x: { ticks: { color: '#86868B' } } } }
+            }));
 
-            const ctx2 = document.getElementById('chartSubjects');
-            if (ctx2) new Chart(ctx2, {
-                type: 'bar',
-                data: {
-                    labels:['高数','数据结构','线性代数','大学物理','英语'],
-                    datasets:[{label:'', data:[82,78,85,74,80], backgroundColor:['#0A84FF','#34C759','#FF9500','#AF52DE','rgba(10,132,255,0.5)'], borderRadius:4, borderSkipped:false}]
-                },
-                options: {
-                    responsive:true, maintainAspectRatio:false,
-                    plugins:{legend:{display:false}},
-                    scales:{
-                        x:{grid:{color:'rgba(229,231,235,0.6)',drawBorder:false}, ticks:{color:'#86868B',font:{size:11}}},
-                        y:{grid:{color:'rgba(229,231,235,0.6)',drawBorder:false}, ticks:{color:'#86868B',font:{size:11}, callback:v=>v+'%'}, beginAtZero:true, max:100}
-                    }
-                }
-            });
-        }, 100);
+            // 提问占比
+            const qNames = (data.questions || []).map(r => r.name);
+            const qCounts = (data.questions || []).map(r => r.count);
+            const ctx4 = document.getElementById('chartStuQ');
+            if (ctx4) chartsInst.push(new Chart(ctx4, { type: 'doughnut', data: { labels: qNames, datasets: [{ data: qCounts, backgroundColor: ['#0A84FF','#34C759','#FF9500','#AF52DE','#5AC8FA','#FF3B30'] }] },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { font: { size: 11 }, color: '#86868B', padding: 12 } } } }
+            }));
+
+            document.getElementById('studentCharts').scrollIntoView({ behavior: 'smooth' });
+
+        } catch (e) { console.error(e); }
     }
 </script>
 </body>

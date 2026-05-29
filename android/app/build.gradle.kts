@@ -31,6 +31,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.fragment)
+    implementation(libs.viewpager2)
     implementation(libs.constraintlayout)
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)

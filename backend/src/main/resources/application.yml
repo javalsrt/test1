@@ -2,20 +2,31 @@ server:
   port: 8080
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
   datasource:
     url: jdbc:mysql://localhost:3306/znxsglTest?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: none
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-not-delete-value: 0
 
 jwt:
   secret: ZnxsglRAGLearningApp2026SecretKeyForJWTTokenGenerationMustBe256Bits
-  expiration: 86400000  # 24小时，单位毫秒
+  expiration: 86400000
+
+dashscope:
+  api-key: sk-4051cf0b4f984fb99a91b8489345f792
+  model: qwen3-vl-plus
+  url: https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation

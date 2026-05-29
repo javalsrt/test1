@@ -9,4 +9,7 @@
     <color name="text_tertiary">#C7C7CC</color>
     <color name="card_background">#FFFFFF</color>
     <color name="error_red">#FF3B30</color>
+    <color name="course_blue">#E8F0FE</color>
+    <color name="course_green">#E8F8ED</color>
+    <color name="course_orange">#FFF3E0</color>
 </resources>

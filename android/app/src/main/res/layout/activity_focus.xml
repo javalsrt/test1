@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF">
+
+    <!-- 返回键 -->
+    <TextView
+        android:id="@+id/btn_back"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="48dp"
+        android:text="‹"
+        android:textSize="28sp"
+        android:textColor="#0A84FF"
+        android:padding="8dp"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- 计时主区域 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <!-- 计时圆盘 -->
+        <TextView
+            android:id="@+id/timer_disk"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:gravity="center"
+            android:text="00:00"
+            android:textSize="44sp"
+            android:textColor="#1D1D1F"
+            android:background="@drawable/bg_timer_circle"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginBottom="20dp" />
+
+        <!-- 状态文字 -->
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="轻触开始"
+            android:textSize="15sp"
+            android:textColor="#86868B"
+            android:layout_marginBottom="4dp" />
+
+        <!-- 今日累计 -->
+        <TextView
+            android:id="@+id/tv_today"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="今日专注 0 分钟"
+            android:textSize="14sp"
+            android:textColor="#1D1D1F" />
+
+        <!-- 上次专注 -->
+        <TextView
+            android:id="@+id/tv_last"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text=""
+            android:textSize="13sp"
+            android:textColor="#86868B"
+            android:visibility="gone" />
+    </LinearLayout>
+</FrameLayout>

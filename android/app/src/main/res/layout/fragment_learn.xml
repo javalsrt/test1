@@ -2,25 +2,94 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
-    android:orientation="vertical"
-    android:gravity="center">
+    android:background="#FFFFFF"
+    android:orientation="vertical">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="学习"
-        android:textSize="20sp"
-        android:textColor="@color/text_tertiary"
-        android:fontFamily="sans-serif" />
+    <!-- ========== 顶部 1/4：4个入口按钮 ========== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="12dp"
+        android:background="#FFFFFF">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="学习功能开发中..."
-        android:textSize="13sp"
-        android:textColor="@color/text_tertiary"
-        android:fontFamily="sans-serif" />
+        <LinearLayout
+            android:id="@+id/btn_focus"
+            android:layout_width="0dp"
+            android:layout_height="72dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_margin="5dp"
+            android:background="@drawable/bg_card_entry"
+            android:clickable="true"
+            android:focusable="true">
+            <TextView android:layout_width="32dp" android:layout_height="32dp"
+                android:text="🎯" android:textSize="18sp" android:gravity="center"
+                android:background="@drawable/bg_circle_tint" android:layout_marginBottom="4dp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="专注" android:textSize="12sp" android:textColor="#1D1D1F" />
+        </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/btn_homework"
+            android:layout_width="0dp" android:layout_height="72dp" android:layout_weight="1"
+            android:orientation="vertical" android:gravity="center" android:layout_margin="5dp"
+            android:background="@drawable/bg_card_entry"
+            android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="32dp" android:layout_height="32dp"
+                android:text="📝" android:textSize="18sp" android:gravity="center"
+                android:background="@drawable/bg_circle_tint" android:layout_marginBottom="4dp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="作业" android:textSize="12sp" android:textColor="#1D1D1F" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btn_ext1"
+            android:layout_width="0dp" android:layout_height="72dp" android:layout_weight="1"
+            android:orientation="vertical" android:gravity="center" android:layout_margin="5dp"
+            android:background="@drawable/bg_card_entry"
+            android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="32dp" android:layout_height="32dp"
+                android:text="📚" android:textSize="18sp" android:gravity="center"
+                android:background="@drawable/bg_circle_tint" android:layout_marginBottom="4dp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="资料" android:textSize="12sp" android:textColor="#1D1D1F" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btn_ext2"
+            android:layout_width="0dp" android:layout_height="72dp" android:layout_weight="1"
+            android:orientation="vertical" android:gravity="center" android:layout_margin="5dp"
+            android:background="@drawable/bg_card_entry"
+            android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="32dp" android:layout_height="32dp"
+                android:text="🤖" android:textSize="18sp" android:gravity="center"
+                android:background="@drawable/bg_circle_tint" android:layout_marginBottom="4dp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="AI问答" android:textSize="12sp" android:textColor="#1D1D1F" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 分割线 -->
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E5E7EB" />
+
+    <!-- 课程标题 -->
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="我的课程" android:textSize="15sp" android:textColor="#86868B"
+        android:paddingStart="16dp" android:paddingTop="14dp" android:paddingBottom="8dp" />
+
+    <!-- 下半：课程列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_courses"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="3"
+        android:scrollbars="none"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp" />
 </LinearLayout>

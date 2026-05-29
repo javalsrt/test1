@@ -1,53 +1,31 @@
 package com.znxsgl.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "user")
+/**
+ * 用户表 (学生/教师/管理员)
+ */
+@TableName("user")
 public class User {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(type = IdType.AUTO)
     private Long id;
-
-    @Column(name = "student_no", unique = true)
     private String studentNo;
-
-    @Column(nullable = false, unique = true)
     private String username;
-
-    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
-
-    @Column(name = "real_name", nullable = false)
     private String realName;
-
-    @Column(name = "avatar_url")
     private String avatarUrl;
-
     private String email;
     private String phone;
-
-    @Column(nullable = false)
-    private Integer role; // 1学生 2教师 3管理员
-
-    @Column(name = "class_id")
+    private Integer role;     // 1学生 2教师 3管理员
     private Long classId;
-
     private String major;
     private String grade;
-
-    @Column(nullable = false)
-    private Integer status = 1; // 0禁用 1正常
-
-    @Column(name = "created_at", updatable = false)
+    private Integer status;   // 0禁用 1正常
     private LocalDateTime createdAt;
-
-    @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
-    // ===== Getters & Setters =====
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getStudentNo() { return studentNo; }
