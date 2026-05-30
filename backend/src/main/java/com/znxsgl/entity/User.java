@@ -23,6 +23,7 @@ public class User {
     private String major;
     private String grade;
     private Integer status;   // 0禁用 1正常
+    private String currentToken;  // 当前有效token，用于单设备登录
     private LocalDateTime createdAt;
     private LocalDateTime lastLogin;
 
@@ -52,6 +53,8 @@ public class User {
     public void setGrade(String grade) { this.grade = grade; }
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
+    public String getCurrentToken() { return currentToken; }
+    public void setCurrentToken(String currentToken) { this.currentToken = currentToken; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getLastLogin() { return lastLogin; }

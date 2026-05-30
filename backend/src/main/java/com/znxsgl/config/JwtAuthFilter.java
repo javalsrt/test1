@@ -1,5 +1,7 @@
 package com.znxsgl.config;
 
+import com.znxsgl.entity.User;
+import com.znxsgl.mapper.UserMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,9 +18,11 @@ import java.util.Collections;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserMapper userMapper;
 
-    public JwtAuthFilter(JwtUtil jwtUtil) {
+    public JwtAuthFilter(JwtUtil jwtUtil, UserMapper userMapper) {
         this.jwtUtil = jwtUtil;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -30,6 +34,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             if (jwtUtil.validateToken(token)) {
                 Long userId = jwtUtil.getUserId(token);
+
+                // 单设备登录校验：token 必须与数据库 current_token 一致
+                User user = userMapper.selectById(userId);
+                if (user == null || !token.equals(user.getCurrentToken())) {
+                    // token 已被新登录覆盖，返回 401
+                    response.setStatus(401);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"error\":\"账号已在其他设备登录，请重新登录\"}");
+                    return;
+                }
+
                 Integer role = jwtUtil.getRole(token);
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(userId, role, Collections.emptyList());

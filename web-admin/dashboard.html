@@ -202,6 +202,20 @@
     document.getElementById('sAvatar').textContent = userName.charAt(0);
 
     const API = '';  // 通过 Nginx 反向代理，留空表示同域
+
+    // ===== 全局 fetch 拦截：401 时踢出登录 =====
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+        const resp = await originalFetch.apply(this, args);
+        if (resp.status === 401) {
+            alert('账号已在其他设备登录，请重新登录');
+            localStorage.clear();
+            window.location.href = 'login.html';
+            throw new Error('unauthorized');
+        }
+        return resp;
+    };
+
     const now = new Date();
     document.getElementById('headerDate').textContent =
         `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;

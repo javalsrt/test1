@@ -33,15 +33,17 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
+        // 初始化 RetrofitClient 的全局 Context（用于 401 拦截跳转）
+        RetrofitClient.init(this);
+
         // 检查是否已登录
         SharedPreferences prefs = getSharedPreferences("znxsgl", MODE_PRIVATE);
         String token = prefs.getString("token", null);
         if (token != null) {
-            // 已有 token，直接跳主页（暂时只做登录完成提示）
-            Toast.makeText(this, "已登录", Toast.LENGTH_SHORT).show();
-            // 后续在这里跳转到主页
-            // startActivity(new Intent(this, MainActivity.class));
-            // finish();
+            // 已有 token，直接跳主页
+            startActivity(new Intent(this, MainActivity.class));
+            finish();
+            return;
         }
 
         apiService = RetrofitClient.getInstance().create(ApiService.class);

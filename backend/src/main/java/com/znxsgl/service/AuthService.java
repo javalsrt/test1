@@ -47,9 +47,12 @@ public class AuthService {
         }
 
         user.setLastLogin(LocalDateTime.now());
+
+        // 生成新 token 并存入数据库（旧 token 自动失效）
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
+        user.setCurrentToken(token);
         userMapper.updateById(user);
 
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
         return LoginResponse.success(token, user.getRealName(), user.getUsername(),
                 user.getRole(), user.getId(), user.getAvatarUrl());
     }
