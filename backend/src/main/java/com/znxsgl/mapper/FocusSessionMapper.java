@@ -16,6 +16,10 @@ public interface FocusSessionMapper extends BaseMapper<FocusSession> {
     @Select("SELECT IFNULL(SUM(duration_seconds), 0) FROM focus_session WHERE user_id = #{userId} AND DATE(finished_at) = CURDATE()")
     int todayTotalSeconds(@Param("userId") Long userId);
 
+    /** 某学生总专注时长（秒） */
+    @Select("SELECT IFNULL(SUM(duration_seconds), 0) FROM focus_session WHERE user_id = #{userId}")
+    int totalSeconds(@Param("userId") Long userId);
+
     /** 某班级学生专注排行 */
     @Select("SELECT u.id AS userId, u.real_name AS realName, SUM(f.duration_seconds) AS totalSeconds " +
             "FROM focus_session f JOIN user u ON u.id = f.user_id " +

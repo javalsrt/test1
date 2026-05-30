@@ -73,6 +73,10 @@ public interface ApiService {
     Call<Map<String, Object>> getFocusToday(
             @Header("Authorization") String token);
 
+    @GET("/api/focus/total")
+    Call<Map<String, Object>> getFocusTotal(
+            @Header("Authorization") String token);
+
     @POST("/api/focus/status")
     Call<Map<String, Object>> updateFocusStatus(
             @Header("Authorization") String token,
@@ -86,4 +90,15 @@ public interface ApiService {
     @GET("/api/focus/last")
     Call<Map<String, Object>> getLastFocus(
             @Header("Authorization") String token);
+
+    // 答题系统
+    @POST("/api/quiz/generate")
+    Call<Map<String, Object>> generateQuiz(
+            @Header("Authorization") String token,
+            @Body Map<String, String> body);
+
+    @POST("/api/quiz/evaluate")
+    Call<Map<String, Object>> evaluateQuiz(
+            @Header("Authorization") String token,
+            @Body Map<String, Object> body);
 }

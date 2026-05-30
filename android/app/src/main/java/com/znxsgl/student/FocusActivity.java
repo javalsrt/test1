@@ -1,17 +1,32 @@
 package com.znxsgl.student;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.viewpager2.widget.ViewPager2;
+
+import com.znxsgl.student.model.QuizQuestion;
 import com.znxsgl.student.network.ApiService;
 import com.znxsgl.student.network.RetrofitClient;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -21,32 +36,31 @@ import retrofit2.Response;
 
 public class FocusActivity extends AppCompatActivity {
 
-    private TextView timerDisk, tvStatus, tvToday, tvLast;
+    private TextView tvTimerCorner, tvToday, tvLast;
+    private View llPanels, llQuizArea;
+    private ViewPager2 viewPagerQuiz;
+    private Button btnQuizDone;
     private Handler handler = new Handler(Looper.getMainLooper());
     private int seconds = 0;
-    private int frozenSeconds = 0;
     private boolean running = false;
-    private boolean toggleCooldown = false;
     private String startTime;
     private String token;
 
-    private final Runnable tick = new Runnable() {
-        @Override
-        public void run() {
-            seconds++;
-            frozenSeconds = seconds;
-            updateDisplay();
-            handler.postDelayed(this, 1000);
-        }
+    private List<QuizQuestion> quizQuestions = new ArrayList<>();
+    private QuizPagerAdapter quizAdapter;
+    private long lastPageEntryTime;
+    private int lastPageIndex = -1;
+    private Long latestSessionId;
+
+    private static final String[][] PANELS = {
+            {"☕","Java基础设计","#0A84FF"},{"📊","数据结构","#34C759"},
+            {"🌐","计算机网络","#5856D6"},{"🗄️","数据库","#5AC8FA"},
+            {"🇨🇳","思政通识","#FF2D55"},{"📚","人文通识","#FF9500"},
     };
 
-    // 每 15 秒刷新今日总时长
+    private final Runnable tick = () -> { seconds++; updateTimerDisplay(); handler.postDelayed(this.tick, 1000); };
     private final Runnable refreshToday = new Runnable() {
-        @Override
-        public void run() {
-            loadTodayTotal();
-            handler.postDelayed(this, 15000);
-        }
+        @Override public void run() { loadTodayTotal(); handler.postDelayed(this, 15000); }
     };
 
     @Override
@@ -58,163 +72,227 @@ public class FocusActivity extends AppCompatActivity {
         token = "Bearer " + prefs.getString("token", "");
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
-        timerDisk = findViewById(R.id.timer_disk);
-        tvStatus = findViewById(R.id.tv_status);
+        tvTimerCorner = findViewById(R.id.tv_timer_corner);
         tvToday = findViewById(R.id.tv_today);
         tvLast = findViewById(R.id.tv_last);
+        llPanels = findViewById(R.id.ll_panels);
+        llQuizArea = findViewById(R.id.ll_quiz_area);
+        viewPagerQuiz = findViewById(R.id.viewpager_quiz);
+        btnQuizDone = findViewById(R.id.btn_quiz_done);
 
-        timerDisk.setOnClickListener(v -> toggleTimer());
+        findViewById(R.id.ll_info).setVisibility(View.GONE);
+        initQuizPanels();
+        setupQuizPager();
+        btnQuizDone.setOnClickListener(v -> submitQuiz());
 
         loadTodayTotal();
         showLastSession();
     }
 
-    private void showLastSession() {
-        ApiService api = RetrofitClient.getInstance().create(ApiService.class);
-        api.getLastFocus(token).enqueue(new Callback<Map<String, Object>>() {
-            @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> resp) {
-                if (resp.isSuccessful() && resp.body() != null) {
-                    Object secObj = resp.body().get("seconds");
-                    if (secObj instanceof Number) {
-                        int sec = ((Number) secObj).intValue();
-                        if (sec > 0) {
-                            handler.post(() -> {
-                                tvLast.setText("上次专注 " + formatDuration(sec));
-                                tvLast.setVisibility(android.view.View.VISIBLE);
-                            });
-                        }
-                    }
-                }
-            }
-            @Override
-            public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
-        });
+    @Override protected void onResume() {
+        super.onResume();
+        if (llQuizArea.getVisibility() != View.VISIBLE) handler.postDelayed(this::autoStartTimer, 3000);
     }
+    @Override protected void onPause() { super.onPause(); stopAndSave(); }
 
-    private void toggleTimer() {
-        // 防抖：500ms 内忽略重复点击
-        if (toggleCooldown) return;
-        toggleCooldown = true;
-        handler.postDelayed(() -> toggleCooldown = false, 500);
-
-        // 按压动画
-        timerDisk.animate().scaleX(1.08f).scaleY(1.08f).setDuration(120)
-                .withEndAction(() -> timerDisk.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start())
-                .start();
-
-        if (!running) {
-            startTimer();
-        } else {
-            pauseTimer();
-        }
-    }
-
-    private void startTimer() {
+    private void autoStartTimer() {
+        if (running) return;
         running = true;
-        seconds = frozenSeconds;
-        if (seconds == 0) {
-            startTime = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        }
-        tvStatus.setText("专注中...");
-        timerDisk.setTextColor(0xFF1D1D1F);
-        timerDisk.setBackgroundResource(R.drawable.bg_timer_circle_active);
-        handler.removeCallbacks(tick);  // 清除残留，防止叠加
-        handler.post(tick);
-        handler.removeCallbacks(refreshToday);
-        handler.post(refreshToday);
-        updateStatus("focusing");
+        if (seconds == 0) startTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(new Date());
+        findViewById(R.id.ll_info).setVisibility(View.VISIBLE);
+        handler.post(tick); handler.post(refreshToday); updateStatus("focusing");
     }
 
-    private void pauseTimer() {
-        running = false;
-        handler.removeCallbacks(tick);
-        handler.removeCallbacks(refreshToday);
-        tvStatus.setText("已暂停");
-        timerDisk.setBackgroundResource(R.drawable.bg_timer_circle);
-        updateDisplay();
-        updateStatus("idle");
+    private void stopAndSave() {
+        handler.removeCallbacks(this::autoStartTimer);
+        if (running) { running = false; handler.removeCallbacks(tick); handler.removeCallbacks(refreshToday); updateStatus("idle"); }
+        if (seconds >= 1) { saveToServer(seconds); }
     }
 
-    private void updateDisplay() {
-        timerDisk.setText(formatDuration(frozenSeconds));
+    private void updateTimerDisplay() { tvTimerCorner.setText(formatDuration(seconds)); }
+    private String formatDuration(int s) {
+        if (s < 3600) return String.format(Locale.getDefault(), "%02d:%02d", s / 60, s % 60);
+        return String.format(Locale.getDefault(), "%d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60);
     }
 
-    /** 格式化时:分:秒 */
-    private String formatDuration(int totalSec) {
-        if (totalSec < 3600) {
-            int m = totalSec / 60;
-            int s = totalSec % 60;
-            return String.format(Locale.getDefault(), "%02d:%02d", m, s);
-        }
-        int h = totalSec / 3600;
-        int m = (totalSec % 3600) / 60;
-        int s = totalSec % 60;
-        return String.format(Locale.getDefault(), "%d:%02d:%02d", h, m, s);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (running) {
-            pauseTimer();
-        }
-        if (frozenSeconds >= 1) {
-            saveToServer(frozenSeconds);
+    // ==== 6面板 ====
+    private void initQuizPanels() {
+        int[] ids = {R.id.quiz_panel_1, R.id.quiz_panel_2, R.id.quiz_panel_3,
+                R.id.quiz_panel_4, R.id.quiz_panel_5, R.id.quiz_panel_6};
+        for (int i = 0; i < ids.length; i++) {
+            FrameLayout frame = findViewById(ids[i]);
+            if (frame == null) continue;
+            String[] p = PANELS[i];
+            LinearLayout c = new LinearLayout(this); c.setOrientation(LinearLayout.VERTICAL); c.setGravity(Gravity.CENTER);
+            TextView ic = new TextView(this); ic.setText(p[0]); ic.setTextSize(28); ic.setGravity(Gravity.CENTER);
+            TextView t = new TextView(this); t.setText(p[1]); t.setTextSize(13);
+            t.setTextColor(Color.parseColor("#1D1D1F")); t.setGravity(Gravity.CENTER); t.setPadding(0, 8, 0, 0);
+            c.addView(ic); c.addView(t);
+            frame.addView(c, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+            final String name = p[1];
+            frame.setOnClickListener(v -> startQuiz(name));
         }
     }
 
-    private void saveToServer(int finalSeconds) {
-        String finishTime = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    // ==== 答题 ====
+    private void setupQuizPager() {
+        quizAdapter = new QuizPagerAdapter(quizQuestions);
+        quizAdapter.setOnAnswerListener(new QuizPagerAdapter.OnAnswerListener() {
+            @Override public void onAnswered(int pos, String a) {
+                recordTime(pos);
+                if (pos + 1 < quizQuestions.size()) viewPagerQuiz.setCurrentItem(pos + 1, true);
+            }
+            @Override public void onAutoSkip(int pos) {}
+        });
+        viewPagerQuiz.setOrientation(ViewPager2.ORIENTATION_VERTICAL);
+        viewPagerQuiz.setAdapter(quizAdapter);
+        viewPagerQuiz.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override public void onPageSelected(int pos) {
+                if (lastPageIndex >= 0) recordTime(lastPageIndex);
+                lastPageIndex = pos;
+                lastPageEntryTime = System.currentTimeMillis();
+                QuizQuestion prev = pos > 0 ? quizQuestions.get(pos - 1) : null;
+                if (prev != null && prev.getUserAnswer() == null && prev.getDurationSec() > 30)
+                    prev.setUserAnswer("不会");
+            }
+        });
+    }
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("durationSeconds", finalSeconds);
-        body.put("startedAt", startTime != null ? startTime :
-                LocalDateTime.now().minusSeconds(finalSeconds).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-        body.put("finishedAt", finishTime);
+    private void recordTime(int pos) {
+        if (pos >= 0 && pos < quizQuestions.size() && lastPageEntryTime > 0) {
+            quizQuestions.get(pos).setDurationSec(quizQuestions.get(pos).getDurationSec() + (int)((System.currentTimeMillis() - lastPageEntryTime) / 1000));
+        }
+    }
 
+    private void startQuiz(String subject) {
+        Toast.makeText(this, "正在生成 " + subject + " 题目...", Toast.LENGTH_SHORT).show();
+        Map<String, String> body = new HashMap<>();
+        body.put("subject", subject);
+        body.put("subjectType", subject.contains("思政") || subject.contains("人文") ? "公共" : "专业");
         ApiService api = RetrofitClient.getInstance().create(ApiService.class);
-        api.saveFocus(token, body).enqueue(new Callback<Map<String, Object>>() {
-            @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> resp) {
-                if (resp.isSuccessful() && resp.body() != null) {
-                    Object total = resp.body().get("todayTotal");
-                    if (total instanceof Number) {
-                        handler.post(() -> tvToday.setText("今日专注 " + formatDuration(((Number) total).intValue())));
-                    }
+        api.generateQuiz(token, body).enqueue(new Callback<Map<String, Object>>() {
+            @Override public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> resp) {
+                if (resp.isSuccessful() && resp.body() != null && resp.body().get("questions") != null) {
+                    Long sid = resp.body().get("sessionId") instanceof Number
+                            ? ((Number) resp.body().get("sessionId")).longValue() : null;
+                    latestSessionId = sid;
+                    handler.post(() -> {
+                        quizQuestions.clear();
+                        List<Map<String, Object>> qList = (List<Map<String, Object>>) resp.body().get("questions");
+                        for (Map<String, Object> qm : qList) {
+                            QuizQuestion q = new QuizQuestion();
+                            q.setQuestionIndex(qList.indexOf(qm) + 1);
+                            q.setQuestionType((String) qm.get("questionType"));
+                            q.setSubject((String) qm.get("subject"));
+                            q.setQuestion((String) qm.get("question"));
+                            q.setOptions((List<String>) qm.get("options"));
+                            q.setCorrectAnswer((String) qm.get("correctAnswer"));
+                            quizQuestions.add(q);
+                        }
+                        quizAdapter.notifyDataSetChanged();
+                        llPanels.setVisibility(View.GONE);
+                        llQuizArea.setVisibility(View.VISIBLE);
+                        lastPageIndex = 0; lastPageEntryTime = System.currentTimeMillis();
+                    });
+                } else {
+                    handler.post(() -> Toast.makeText(FocusActivity.this, "题目生成失败", Toast.LENGTH_SHORT).show());
                 }
             }
-            @Override
-            public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
+            @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                handler.post(() -> Toast.makeText(FocusActivity.this, "网络错误", Toast.LENGTH_SHORT).show());
+            }
         });
     }
 
-    private void updateStatus(String status) {
-        Map<String, String> body = new HashMap<>();
-        body.put("status", status);
+    private void submitQuiz() {
+        recordTime(lastPageIndex);
+        for (QuizQuestion q : quizQuestions) if (q.getUserAnswer() == null) q.setUserAnswer("不会");
+        List<Map<String, Object>> answers = new ArrayList<>();
+        for (QuizQuestion q : quizQuestions) {
+            Map<String, Object> a = new HashMap<>();
+            a.put("questionIndex", q.getQuestionIndex());
+            a.put("questionType", q.getQuestionType());
+            a.put("subject", q.getSubject());
+            a.put("question", q.getQuestion());
+            a.put("options", q.getOptions());
+            a.put("userAnswer", q.getUserAnswer() != null ? q.getUserAnswer() : "不会");
+            a.put("correctAnswer", q.getCorrectAnswer());
+            a.put("durationSec", q.getDurationSec());
+            a.put("modifiedCount", q.getModifiedCount());
+            answers.add(a);
+        }
+        Map<String, Object> body = new HashMap<>();
+        body.put("sessionId", latestSessionId);
+        body.put("answers", answers);
         ApiService api = RetrofitClient.getInstance().create(ApiService.class);
-        api.updateFocusStatus(token, body).enqueue(new Callback<Map<String, Object>>() {
-            @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> resp) {}
-            @Override
-            public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
+        api.evaluateQuiz(token, body).enqueue(new Callback<Map<String, Object>>() {
+            @Override public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> resp) {
+                handler.post(() -> {
+                    quizQuestions.clear(); quizAdapter.notifyDataSetChanged();
+                    llQuizArea.setVisibility(View.GONE); llPanels.setVisibility(View.VISIBLE);
+                    loadTodayTotal(); Toast.makeText(FocusActivity.this, "测评完成！", Toast.LENGTH_SHORT).show();
+                });
+            }
+            @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                handler.post(() -> Toast.makeText(FocusActivity.this, "提交失败", Toast.LENGTH_SHORT).show());
+            }
         });
+    }
+
+    // ==== 服务器交互 ====
+    private void saveToServer(int sec) {
+        Map<String, Object> b = new HashMap<>();
+        b.put("durationSeconds", sec);
+        b.put("startedAt", startTime != null ? startTime
+                : new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                        .format(new Date(System.currentTimeMillis() - sec * 1000L)));
+        b.put("finishedAt", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(new Date()));
+        RetrofitClient.getInstance().create(ApiService.class).saveFocus(token, b).enqueue(new Callback<Map<String, Object>>() {
+            @Override public void onResponse(Call<Map<String, Object>> c, Response<Map<String, Object>> r) {
+                if (r.isSuccessful() && r.body() != null) {
+                    Object t = r.body().get("todayTotal");
+                    if (t instanceof Number) handler.post(() -> tvToday.setText("今日专注 " + formatDuration(((Number) t).intValue())));
+                }
+            }
+            @Override public void onFailure(Call<Map<String, Object>> c, Throwable t) {}
+        });
+        seconds = 0;
     }
 
     private void loadTodayTotal() {
-        ApiService api = RetrofitClient.getInstance().create(ApiService.class);
-        api.getFocusToday(token).enqueue(new Callback<Map<String, Object>>() {
-            @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> resp) {
-                if (resp.isSuccessful() && resp.body() != null) {
-                    Object total = resp.body().get("totalSeconds");
-                    if (total instanceof Number) {
-                        handler.post(() -> tvToday.setText("今日专注 " + formatDuration(((Number) total).intValue())));
+        RetrofitClient.getInstance().create(ApiService.class).getFocusToday(token).enqueue(new Callback<Map<String, Object>>() {
+            @Override public void onResponse(Call<Map<String, Object>> c, Response<Map<String, Object>> r) {
+                if (r.isSuccessful() && r.body() != null) {
+                    Object t = r.body().get("totalSeconds");
+                    if (t instanceof Number) handler.post(() -> tvToday.setText("今日专注 " + formatDuration(((Number) t).intValue())));
+                }
+            }
+            @Override public void onFailure(Call<Map<String, Object>> c, Throwable t) {}
+        });
+    }
+
+    private void showLastSession() {
+        RetrofitClient.getInstance().create(ApiService.class).getLastFocus(token).enqueue(new Callback<Map<String, Object>>() {
+            @Override public void onResponse(Call<Map<String, Object>> c, Response<Map<String, Object>> r) {
+                if (r.isSuccessful() && r.body() != null) {
+                    Object s = r.body().get("seconds");
+                    if (s instanceof Number && tvLast != null) {
+                        int sec = ((Number) s).intValue();
+                        if (sec > 0) handler.post(() -> tvLast.setText("上次 " + formatDuration(sec)));
                     }
                 }
             }
-            @Override
-            public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
+            @Override public void onFailure(Call<Map<String, Object>> c, Throwable t) {}
         });
     }
+
+    private void updateStatus(String s) {
+        Map<String, String> b = new HashMap<>(); b.put("status", s);
+        RetrofitClient.getInstance().create(ApiService.class).updateFocusStatus(token, b).enqueue(emptyCb());
+    }
+
+    private Callback<Map<String, Object>> emptyCb() { return new Callback<Map<String, Object>>() {
+        @Override public void onResponse(Call<Map<String, Object>> c, Response<Map<String, Object>> r) {}
+        @Override public void onFailure(Call<Map<String, Object>> c, Throwable t) {}
+    };}
 }

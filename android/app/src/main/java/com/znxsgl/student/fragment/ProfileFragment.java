@@ -27,6 +27,8 @@ import com.znxsgl.student.network.RetrofitClient;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -40,6 +42,16 @@ public class ProfileFragment extends Fragment {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private SharedPreferences prefs;
     private boolean isFirstResume = true;
+    private TextView tvStatHours;
+
+    // 学习时长实时刷新
+    private final Runnable refreshFocusTotal = new Runnable() {
+        @Override
+        public void run() {
+            loadFocusTotal();
+            mainHandler.postDelayed(this, 10000); // 每10秒刷新
+        }
+    };
 
     private static final String[] ICONS = {"📖","💻","📱","🌐","🎨","🔧","✍️","🗣️","🎬","📋","👥","📜","🏛️","🛡️"};
 
@@ -61,6 +73,10 @@ public class ProfileFragment extends Fragment {
         tvAvatar.setText(String.valueOf(realName.charAt(0)));
         tvName.setText(realName);
         tvInfo.setText("学号: " + username);
+
+        // 学习时长
+        tvStatHours = view.findViewById(R.id.tv_stat_hours);
+        loadFocusTotal();
 
         // 课程列表
         rvCourses = view.findViewById(R.id.rv_courses);
@@ -100,7 +116,55 @@ public class ProfileFragment extends Fragment {
         }
         if (isAdded() && prefs != null) {
             loadCourses();
+            loadFocusTotal();
         }
+        // 实时轮询学习时长
+        mainHandler.removeCallbacks(refreshFocusTotal);
+        mainHandler.post(refreshFocusTotal);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mainHandler.removeCallbacks(refreshFocusTotal);
+    }
+
+    /** hide() 不触发 onPause，处理 Tab 切换 */
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (hidden) {
+            mainHandler.removeCallbacks(refreshFocusTotal);
+        } else {
+            // 切回此 Tab，立即刷新 + 启动定时刷新
+            loadFocusTotal();
+            loadCourses();
+            mainHandler.removeCallbacks(refreshFocusTotal);
+            mainHandler.post(refreshFocusTotal);
+        }
+    }
+
+    /** 加载累计学习总时长（分钟） */
+    private void loadFocusTotal() {
+        String token = "Bearer " + prefs.getString("token", "");
+        ApiService api = RetrofitClient.getInstance().create(ApiService.class);
+        api.getFocusTotal(token).enqueue(new Callback<Map<String, Object>>() {
+            @Override
+            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> resp) {
+                if (!isAdded() || tvStatHours == null) return;
+                if (resp.isSuccessful() && resp.body() != null) {
+                    Object secs = resp.body().get("totalSeconds");
+                    if (secs instanceof Number) {
+                        mainHandler.post(() -> {
+                            int minutes = ((Number) secs).intValue() / 60;
+                            tvStatHours.setText(String.valueOf(minutes));
+                        });
+                    }
+                }
+            }
+            @Override
+            public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
+        });
     }
 
     /** 供 MainActivity WebSocket 回调，刷新课程列表 */

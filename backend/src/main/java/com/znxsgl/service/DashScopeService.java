@@ -93,6 +93,7 @@ public class DashScopeService {
                 messages.add(user);
             } else {
                 // OpenAI 兼容格式：messages 直接放顶层，content 是字符串
+                body.put("max_tokens", 8192);
                 ArrayNode messages = body.putArray("messages");
 
                 if (systemPrompt != null && !systemPrompt.isEmpty()) {

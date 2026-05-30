@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:paddingTop="60dp"
+    android:paddingHorizontal="24dp">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginBottom="20dp">
+        <TextView android:id="@+id/tv_quiz_tag" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="✍️ 解析题"
+            android:textSize="13sp" android:textColor="#5856D6"
+            android:paddingHorizontal="10dp" android:paddingVertical="4dp"
+            android:background="@drawable/bg_tag" />
+        <TextView android:id="@+id/tv_quiz_num" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="1/30"
+            android:textSize="13sp" android:textColor="#86868B"
+            android:layout_marginStart="10dp" />
+    </LinearLayout>
+
+    <TextView android:id="@+id/tv_quiz_question" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="题目内容"
+        android:textSize="17sp" android:textColor="#1D1D1F"
+        android:lineSpacingExtra="4dp" android:layout_marginBottom="24dp" />
+
+    <EditText android:id="@+id/et_answer" android:layout_width="match_parent"
+        android:layout_height="0dp" android:layout_weight="1"
+        android:gravity="top" android:padding="16dp"
+        android:background="@drawable/bg_card_entry"
+        android:hint="请输入你的答案..."
+        android:textSize="15sp" android:textColor="#1D1D1F"
+        android:textColorHint="#C7C7CC" />
+
+    <TextView android:id="@+id/btn_submit" android:layout_width="match_parent"
+        android:layout_height="48dp" android:text="提交答案"
+        android:textSize="15sp" android:textColor="#FFFFFF"
+        android:gravity="center" android:layout_marginTop="16dp"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_btn_primary"
+        android:clickable="true" android:focusable="true" />
+</LinearLayout>

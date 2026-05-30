@@ -50,6 +50,15 @@ public class FocusController {
         return ResponseEntity.ok(Map.of("totalSeconds", mapper.todayTotalSeconds(userId)));
     }
 
+    // 学生：累计专注总时长
+    @GetMapping("/total")
+    public ResponseEntity<Map<String, Object>> total(Authentication auth) {
+        Long userId = (Long) auth.getPrincipal();
+        int secs = mapper.totalSeconds(userId);
+        double hours = Math.round(secs / 36.0) / 100.0; // 转为小时，保留2位小数
+        return ResponseEntity.ok(Map.of("totalSeconds", secs, "totalHours", hours));
+    }
+
     // 学生：获取上次专注时长
     @GetMapping("/last")
     public ResponseEntity<Map<String, Object>> lastSession(Authentication auth) {
