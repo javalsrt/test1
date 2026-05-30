@@ -1,5 +1,6 @@
 package com.znxsgl.student;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -39,6 +40,9 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.nav_schedule) {
                 switchFragment(new ScheduleFragment());
+                return true;
+            } else if (id == R.id.nav_focus) {
+                startActivity(new Intent(this, FocusActivity.class));
                 return true;
             } else if (id == R.id.nav_profile) {
                 switchFragment(new ProfileFragment());

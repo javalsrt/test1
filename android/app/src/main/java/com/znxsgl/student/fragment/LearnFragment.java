@@ -73,15 +73,6 @@ public class LearnFragment extends Fragment {
         });
         helper.attachToRecyclerView(rvCourses);
 
-        view.findViewById(R.id.btn_focus).setOnClickListener(v ->
-                startActivity(new Intent(getContext(), FocusActivity.class)));
-        view.findViewById(R.id.btn_homework).setOnClickListener(v ->
-                showToast("作业功能开发中"));
-        view.findViewById(R.id.btn_ext1).setOnClickListener(v ->
-                showToast("资料功能开发中"));
-        view.findViewById(R.id.btn_ext2).setOnClickListener(v ->
-                showToast("AI问答功能开发中"));
-
         loadCourses();
 
         return view;

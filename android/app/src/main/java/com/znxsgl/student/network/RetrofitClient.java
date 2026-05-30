@@ -24,7 +24,7 @@ public class RetrofitClient {
     // 如果用真机测试，请改为电脑的局域网 IP你好
 
 
-    public static final String BASE_URL = "http://8.166.118.19";
+    public static final String BASE_URL = "http://10.0.2.2:8080";
 
     private static Retrofit instance;
     private static Context appContext;

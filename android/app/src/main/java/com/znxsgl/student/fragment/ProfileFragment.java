@@ -39,14 +39,6 @@ public class ProfileFragment extends Fragment {
         tvName.setText(realName);
         tvInfo.setText("学号: " + username);
 
-        // 退出登录
-        view.findViewById(R.id.btn_logout).setOnClickListener(v -> {
-            prefs.edit().clear().apply();
-            startActivity(new Intent(getActivity(), LoginActivity.class));
-            requireActivity().finish();
-            Toast.makeText(getContext(), "已退出登录", Toast.LENGTH_SHORT).show();
-        });
-
         return view;
     }
 }
