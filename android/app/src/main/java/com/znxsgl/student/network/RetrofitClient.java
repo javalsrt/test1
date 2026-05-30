@@ -11,7 +11,9 @@ public class RetrofitClient {
 
     // 开发环境使用 10.0.2.2 访问宿主机 localhost
     // 如果用真机测试，请改为电脑的局域网 IP
-    public static final String BASE_URL = "http://10.0.2.2:8080";
+
+
+    public static final String BASE_URL = "http://8.166.118.19";
 
     private static Retrofit instance;
 
