@@ -56,8 +56,13 @@ public class ChatController {
         // 1. 保存学生消息
         chatService.sendMessage(courseName, userId, content, "student");
 
-        // 2. RAG 检索相关知识
-        String ragContext = ragService.retrieveContext(courseName, content);
+        // 2. RAG 检索相关知识（表不存在时优雅降级）
+        String ragContext = "";
+        try {
+            ragContext = ragService.retrieveContext(courseName, content);
+        } catch (Exception e) {
+            System.out.println("=== RAG 检索失败（可能表未创建）: " + e.getMessage());
+        }
 
         // 3. 构建带 RAG 上下文的 prompt
         StringBuilder prompt = new StringBuilder();
