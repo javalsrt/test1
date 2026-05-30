@@ -27,6 +27,6 @@ jwt:
   expiration: 86400000
 
 dashscope:
-  api-key: sk-4051cf0b4f984fb99a91b8489345f792
-  model: qwen3-vl-plus
-  url: https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation
+  api-key: sk-0e2186654cff45f7995e4543f9ad7dc3
+  model: qwen-turbo
+  url: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
