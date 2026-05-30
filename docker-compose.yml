@@ -33,14 +33,14 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/znxsglTest?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/znxsglTest?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: 123456
       JWT_SECRET: ZnxsglRAGLearningApp2026SecretKeyForJWTTokenGenerationMustBe256Bits
       JWT_EXPIRATION: "86400000"
-      DASHSCOPE_API_KEY: sk-4051cf0b4f984fb99a91b8489345f792
-      DASHSCOPE_MODEL: qwen3-vl-plus
-      DASHSCOPE_URL: https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation
+      DASHSCOPE_API_KEY: sk-0e2186654cff45f7995e4543f9ad7dc3
+      DASHSCOPE_MODEL: qwen-turbo
+      DASHSCOPE_URL: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
     ports:
       - "8080:8080"
 
