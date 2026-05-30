@@ -201,7 +201,7 @@
     document.getElementById('sName').textContent = userName;
     document.getElementById('sAvatar').textContent = userName.charAt(0);
 
-    const API = 'http://localhost:8080';
+    const API = '';  // 通过 Nginx 反向代理，留空表示同域
     const now = new Date();
     document.getElementById('headerDate').textContent =
         `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
