@@ -5,17 +5,13 @@
     android:background="#FFFFFF"
     android:orientation="vertical">
 
-    <!-- 课程标题 -->
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="我的课程" android:textSize="17sp" android:textColor="#1D1D1F"
-        android:paddingStart="16dp" android:paddingTop="20dp" android:paddingBottom="10dp" />
-
-    <!-- 课程列表 -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_courses"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scrollbars="none"
-        android:clipToPadding="false"
+        android:text="学习"
+        android:textSize="20sp"
+        android:textColor="#1D1D1F"
+        android:fontFamily="sans-serif-medium"
+        android:paddingStart="16dp"
+        android:paddingTop="24dp"
         android:paddingBottom="16dp" />
+
 </LinearLayout>

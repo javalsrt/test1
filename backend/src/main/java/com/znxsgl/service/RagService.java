@@ -1,5 +1,7 @@
 package com.znxsgl.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.znxsgl.entity.DocumentVector;
 import com.znxsgl.mapper.DocumentVectorMapper;
 import org.springframework.stereotype.Service;
@@ -9,6 +11,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class RagService {
@@ -16,6 +19,7 @@ public class RagService {
     private final DocumentVectorMapper docMapper;
     private final DashScopeService ai;
     private final Path uploadDir;
+    private final ObjectMapper jsonMapper = new ObjectMapper();
 
     public RagService(DocumentVectorMapper docMapper, DashScopeService ai) {
         this.docMapper = docMapper;
@@ -27,14 +31,14 @@ public class RagService {
         }
     }
 
-    /** 上传并分析文件，存入向量库 */
+    /** 上传并分析文件，存入向量库（语义向量化） */
     public String uploadAndAnalyze(String courseName, MultipartFile file) {
         try {
             String fileName = file.getOriginalFilename();
             Path saved = uploadDir.resolve(UUID.randomUUID() + "_" + fileName);
             file.transferTo(saved.toFile());
 
-            String extractedText = null;
+            String extractedText;
 
             if (isDocument(fileName)) {
                 extractedText = extractDocumentText(saved);
@@ -51,13 +55,22 @@ public class RagService {
                 return "（文件已上传，但未能提取到文字内容）";
             }
 
-            // 分块存入向量库
+            // 分块
             List<String> chunks = splitText(extractedText, 500);
-            for (String chunk : chunks) {
+
+            // 批量向量化
+            float[][] embeddings = ai.embedBatch(chunks);
+
+            // 存入数据库
+            for (int i = 0; i < chunks.size(); i++) {
                 DocumentVector dv = new DocumentVector();
                 dv.setCourseName(courseName);
                 dv.setDocName(fileName);
-                dv.setContentChunk(chunk.trim());
+                dv.setContentChunk(chunks.get(i).trim());
+                // 存储向量为 JSON 数组字符串
+                if (embeddings != null && i < embeddings.length && embeddings[i] != null) {
+                    dv.setEmbedding(vectorToJson(embeddings[i]));
+                }
                 dv.setCreatedAt(LocalDateTime.now());
                 docMapper.insert(dv);
             }
@@ -66,25 +79,142 @@ public class RagService {
                     ? extractedText.substring(0, Math.min(200, extractedText.length())) + "..."
                     : extractedText;
             return "📎 已分析《" + fileName + "》，提取 " + extractedText.length()
-                    + " 字，分 " + chunks.size() + " 块存入知识库：\n\n" + summary;
+                    + " 字，分 " + chunks.size() + " 块存入知识库"
+                    + (embeddings != null ? "（语义向量已生成）" : "") + "：\n\n" + summary;
         } catch (Exception e) {
             e.printStackTrace();
             return "（文件处理失败：" + e.getMessage() + "）";
         }
     }
 
-    /** RAG 检索：根据用户问题搜索相关上下文 */
+    /**
+     * 语义向量检索：将问题向量化后，与知识库中所有文档块计算余弦相似度，取 top-5
+     * 如果向量检索不可用，降级为关键词 LIKE 匹配
+     */
     public String retrieveContext(String courseName, String question) {
-        List<String> results = docMapper.search(courseName, question);
-        if (results == null || results.isEmpty()) return "";
-        StringBuilder sb = new StringBuilder("以下是课程相关参考内容：\n");
-        for (int i = 0; i < results.size(); i++) {
-            sb.append("---\n参考").append(i + 1).append("：").append(results.get(i)).append("\n");
+        try {
+            // 1. 将用户问题向量化
+            float[] queryVec = ai.embed(question);
+            if (queryVec == null) {
+                System.out.println("=== Embedding 失败，降级为关键词检索");
+                return retrieveContextFallback(courseName, question);
+            }
+
+            // 2. 加载该课程所有带向量的文档块
+            List<DocumentVector> all = docMapper.findByCourseWithEmbedding(courseName);
+            if (all == null || all.isEmpty()) {
+                // 没有向量数据，降级
+                return retrieveContextFallback(courseName, question);
+            }
+
+            // 3. 计算余弦相似度并排序
+            List<DocScore> scored = new ArrayList<>();
+            for (DocumentVector dv : all) {
+                float[] docVec = jsonToVector(dv.getEmbedding());
+                if (docVec == null) continue;
+                double sim = cosineSimilarity(queryVec, docVec);
+                scored.add(new DocScore(dv.getContentChunk(), sim));
+            }
+            scored.sort((a, b) -> Double.compare(b.score, a.score));
+
+            // 4. 取 top-5
+            List<String> topResults = scored.stream()
+                    .limit(5)
+                    .filter(ds -> ds.score > 0.3) // 过滤低相关度
+                    .map(ds -> ds.text)
+                    .collect(Collectors.toList());
+
+            if (topResults.isEmpty()) return "";
+
+            StringBuilder sb = new StringBuilder("以下是课程相关参考内容（语义检索）：\n");
+            for (int i = 0; i < topResults.size(); i++) {
+                sb.append("---\n参考").append(i + 1).append("：").append(topResults.get(i)).append("\n");
+            }
+            return sb.toString();
+
+        } catch (Exception e) {
+            System.out.println("=== 向量检索异常，降级关键词: " + e.getMessage());
+            return retrieveContextFallback(courseName, question);
         }
-        return sb.toString();
     }
 
-    // ===== 工具方法 =====
+    /** 降级方案：关键词 LIKE 匹配（兼容旧数据） */
+    private String retrieveContextFallback(String courseName, String question) {
+        try {
+            // 查 content_chunk 做简单的关键词提取
+            List<DocumentVector> all = docMapper.findByCourseWithEmbedding(courseName);
+            if (all == null || all.isEmpty()) {
+                // 没有带 embedding 的数据，直接用旧方式查所有
+                List<DocumentVector> raw = docMapper.selectList(
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<DocumentVector>()
+                                .eq(DocumentVector::getCourseName, courseName)
+                                .last("LIMIT 20"));
+                if (raw == null || raw.isEmpty()) return "";
+
+                // 简单关键词匹配
+                List<String> results = new ArrayList<>();
+                for (DocumentVector dv : raw) {
+                    if (dv.getContentChunk() != null && dv.getContentChunk().contains(question.substring(0, Math.min(10, question.length())))) {
+                        results.add(dv.getContentChunk());
+                    }
+                }
+                if (results.isEmpty()) {
+                    results = raw.stream().map(DocumentVector::getContentChunk).limit(3).collect(Collectors.toList());
+                }
+
+                StringBuilder sb = new StringBuilder("以下是课程相关参考内容：\n");
+                for (int i = 0; i < Math.min(results.size(), 5); i++) {
+                    sb.append("---\n参考").append(i + 1).append("：").append(results.get(i)).append("\n");
+                }
+                return sb.toString();
+            }
+        } catch (Exception e) {
+            System.out.println("=== 降级检索也失败了: " + e.getMessage());
+        }
+        return "";
+    }
+
+    // ===== 向量工具方法 =====
+
+    /** 余弦相似度 */
+    public static double cosineSimilarity(float[] a, float[] b) {
+        if (a == null || b == null || a.length != b.length) return 0;
+        double dot = 0, normA = 0, normB = 0;
+        for (int i = 0; i < a.length; i++) {
+            dot += (double) a[i] * b[i];
+            normA += (double) a[i] * a[i];
+            normB += (double) b[i] * b[i];
+        }
+        double denominator = Math.sqrt(normA) * Math.sqrt(normB);
+        return denominator == 0 ? 0 : dot / denominator;
+    }
+
+    /** 向量 → JSON 字符串 */
+    private String vectorToJson(float[] vec) {
+        try {
+            return jsonMapper.writeValueAsString(vec);
+        } catch (JsonProcessingException e) {
+            // fallback: 手动拼接
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < vec.length; i++) {
+                if (i > 0) sb.append(",");
+                sb.append(vec[i]);
+            }
+            return sb.append("]").toString();
+        }
+    }
+
+    /** JSON 字符串 → 向量 */
+    private float[] jsonToVector(String json) {
+        if (json == null || json.isEmpty()) return null;
+        try {
+            return jsonMapper.readValue(json, float[].class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // ===== 文本处理工具方法 =====
 
     private boolean isDocument(String name) {
         if (name == null) return false;
@@ -184,5 +314,15 @@ public class RagService {
             start = end;
         }
         return chunks;
+    }
+
+    /** 辅助类：文档块+相似度分数 */
+    private static class DocScore {
+        final String text;
+        final double score;
+        DocScore(String text, double score) {
+            this.text = text;
+            this.score = score;
+        }
     }
 }

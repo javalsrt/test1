@@ -41,6 +41,8 @@ services:
       DASHSCOPE_API_KEY: sk-0e2186654cff45f7995e4543f9ad7dc3
       DASHSCOPE_MODEL: qwen-turbo
       DASHSCOPE_URL: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+      DASHSCOPE_EMBEDDING_MODEL: text-embedding-v3
+      DASHSCOPE_EMBEDDING_URL: https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings
     ports:
       - "8080:8080"
 

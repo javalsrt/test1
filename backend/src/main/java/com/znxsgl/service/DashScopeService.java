@@ -8,6 +8,8 @@ import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -21,6 +23,12 @@ public class DashScopeService {
 
     @Value("${dashscope.url}")
     private String apiUrl;
+
+    @Value("${dashscope.embedding-model:text-embedding-v3}")
+    private String embeddingModel;
+
+    @Value("${dashscope.embedding-url:https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings}")
+    private String embeddingUrl;
 
     private final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -158,5 +166,97 @@ public class DashScopeService {
             e.printStackTrace();
         }
         return "（AI 服务异常，请稍后重试）";
+    }
+
+    /**
+     * 文本向量化（单条）
+     * 调用 DashScope text-embedding-v3 OpenAI兼容接口
+     * @return 浮点型向量数组
+     */
+    public float[] embed(String text) {
+        float[][] result = embedInternal(List.of(text));
+        return result != null && result.length > 0 ? result[0] : null;
+    }
+
+    /**
+     * 批量文本向量化
+     * 调用 DashScope text-embedding-v3 OpenAI兼容接口
+     * @return 浮点型向量数组，与输入顺序一一对应
+     */
+    public float[][] embedBatch(List<String> texts) {
+        if (texts == null || texts.isEmpty()) return new float[0][];
+        // 分批处理，每批最多25条
+        if (texts.size() <= 25) {
+            return embedInternal(texts);
+        }
+        List<float[]> all = new ArrayList<>();
+        for (int i = 0; i < texts.size(); i += 25) {
+            int end = Math.min(i + 25, texts.size());
+            float[][] batch = embedInternal(texts.subList(i, end));
+            if (batch != null) {
+                for (float[] v : batch) all.add(v);
+            } else {
+                // 失败的全部填null
+                for (int j = i; j < end; j++) all.add(null);
+            }
+        }
+        return all.toArray(new float[0][]);
+    }
+
+    private float[][] embedInternal(List<String> texts) {
+        try {
+            ObjectNode body = mapper.createObjectNode();
+            body.put("model", embeddingModel);
+            if (texts.size() == 1) {
+                body.put("input", texts.get(0));
+            } else {
+                ArrayNode arr = body.putArray("input");
+                texts.forEach(arr::add);
+            }
+
+            String reqJson = mapper.writeValueAsString(body);
+            System.out.println("=== Embedding 请求: " + texts.size() + " 条文本");
+
+            Request request = new Request.Builder()
+                    .url(embeddingUrl)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .post(RequestBody.create(reqJson, MediaType.parse("application/json")))
+                    .build();
+
+            try (Response response = client.newCall(request).execute()) {
+                String bodyStr = response.body().string();
+
+                if (response.code() != 200) {
+                    System.out.println("=== Embedding 错误[" + response.code() + "]: "
+                            + bodyStr.substring(0, Math.min(300, bodyStr.length())));
+                    return null;
+                }
+
+                JsonNode node = mapper.readTree(bodyStr);
+                JsonNode dataArr = node.path("data");
+                if (!dataArr.isArray() || dataArr.size() == 0) {
+                    System.out.println("=== Embedding 响应无data: " + bodyStr.substring(0, 200));
+                    return null;
+                }
+
+                float[][] result = new float[dataArr.size()][];
+                for (int i = 0; i < dataArr.size(); i++) {
+                    JsonNode emb = dataArr.get(i).path("embedding");
+                    if (emb.isArray()) {
+                        result[i] = new float[emb.size()];
+                        for (int j = 0; j < emb.size(); j++) {
+                            result[i][j] = (float) emb.get(j).asDouble();
+                        }
+                    }
+                }
+                System.out.println("=== Embedding 成功: " + result.length + " 条, 维度=" + (result[0] != null ? result[0].length : "?"));
+                return result;
+            }
+        } catch (Exception e) {
+            System.out.println("=== Embedding 异常: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
     }
 }

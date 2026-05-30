@@ -1,6 +1,5 @@
 package com.znxsgl.student;
 
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -11,7 +10,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.znxsgl.student.fragment.LearnFragment;
+import com.znxsgl.student.fragment.FocusFragment;
 import com.znxsgl.student.fragment.ScheduleFragment;
 import com.znxsgl.student.fragment.ProfileFragment;
 import com.znxsgl.student.network.RetrofitClient;
@@ -35,14 +34,11 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
-            if (id == R.id.nav_learn) {
-                switchFragment(new LearnFragment());
-                return true;
-            } else if (id == R.id.nav_schedule) {
+            if (id == R.id.nav_schedule) {
                 switchFragment(new ScheduleFragment());
                 return true;
             } else if (id == R.id.nav_focus) {
-                startActivity(new Intent(this, FocusActivity.class));
+                switchFragment(new FocusFragment());
                 return true;
             } else if (id == R.id.nav_profile) {
                 switchFragment(new ProfileFragment());
@@ -51,7 +47,51 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        bottomNav.setSelectedItemId(R.id.nav_learn);
+        // 突出"专注"按钮：放大图标 + 上浮效果
+        enhanceFocusTab(bottomNav);
+
+        bottomNav.setSelectedItemId(R.id.nav_schedule);
+    }
+
+    /** 将"专注"Tab 放大突出显示 —— App 核心功能 */
+    private void enhanceFocusTab(BottomNavigationView bottomNav) {
+        bottomNav.post(() -> {
+            // BottomNavigationView 内部是 BottomNavigationMenuView
+            android.view.ViewGroup menuView = (android.view.ViewGroup) bottomNav.getChildAt(0);
+            for (int i = 0; i < menuView.getChildCount(); i++) {
+                android.view.View tab = menuView.getChildAt(i);
+                // 找到"专注"对应的 tab（索引1）
+                if (i == 1) {
+                    // 整体放大
+                    tab.setScaleX(1.25f);
+                    tab.setScaleY(1.25f);
+                    tab.setTranslationY(-4f);
+
+                    // 给专注 tab 添加圆形背景
+                    android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+                    bg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+                    bg.setColor(0xFF0A84FF);
+                    bg.setSize(dp(52), dp(52));
+
+                    // 找到 tab 内的图标
+                    if (tab instanceof android.view.ViewGroup) {
+                        android.view.ViewGroup tabGroup = (android.view.ViewGroup) tab;
+                        for (int j = 0; j < tabGroup.getChildCount(); j++) {
+                            android.view.View child = tabGroup.getChildAt(j);
+                            if (child instanceof android.widget.ImageView) {
+                                child.setBackground(bg);
+                                ((android.widget.ImageView) child).setColorFilter(0xFFFFFFFF);
+                                child.setPadding(dp(12), dp(12), dp(12), dp(12));
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    private int dp(int px) {
+        return (int) (px * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void connectWebSocket() {
@@ -63,13 +103,13 @@ public class MainActivity extends AppCompatActivity {
         ws.setListener((courseName, content, scheduleInfo) -> {
             runOnUiThread(() -> {
                 showScheduleToast(content);
-                // 通知当前 LearnFragment 刷新
-                if (currentFragment instanceof LearnFragment) {
-                    ((LearnFragment) currentFragment).refreshCourses();
+                // 通知 ProfileFragment 刷新课程列表（红点状态）
+                if (currentFragment instanceof ProfileFragment) {
+                    ((ProfileFragment) currentFragment).loadCoursesIfAdded();
                 }
             });
         });
-        ws.connect(RetrofitClient.BASE_URL, userId);
+        ws.connect(RetrofitClient.getBaseUrl(), userId);
     }
 
     /** 显示排课通知 —— 自定义多行 Toast，一目了然 */

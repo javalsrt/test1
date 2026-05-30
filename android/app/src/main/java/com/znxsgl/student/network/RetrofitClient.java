@@ -20,11 +20,11 @@ import java.util.concurrent.TimeUnit;
 
 public class RetrofitClient {
 
-    // 开发环境使用 10.0.2.2:8080 访问宿主机 localhost服务器8.166.118.19
-    // 如果用真机测试，请改为电脑的局域网 IP你好
-
-
-    public static final String BASE_URL = "http://10.0.2.2:8080";
+    // 自动判断：本地开发用模拟器地址，部署时改为服务器地址你好
+    // 模拟器默认地址，真机测试改为 8.166.118.19
+    public static String getBaseUrl() {
+        return "http://10.0.2.2:8080";
+    }
 
     private static Retrofit instance;
     private static Context appContext;
@@ -67,7 +67,7 @@ public class RetrofitClient {
                     .build();
 
             instance = new Retrofit.Builder()
-                    .baseUrl(BASE_URL)
+                    .baseUrl(getBaseUrl())
                     .client(client)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
