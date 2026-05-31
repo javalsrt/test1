@@ -1,15 +1,12 @@
 -- ============================================================
--- Docker 环境首次启动自动初始化脚本
--- SQL 文件按文件名排序执行，01-init 会最先执行
+-- 服务器数据库迁移脚本
+-- 在服务器上执行（不会删除已有数据）
+-- 用法: docker exec -i znxsgl-mysql mysql -uroot -p123456 < server_migrate.sql
 -- ============================================================
 
 USE znxsglTest;
 
--- ============================================================
--- 1. 答题系统表
--- ============================================================
-
--- 答题会话主表
+-- 1. 创建答题会话表
 CREATE TABLE IF NOT EXISTS quiz_session (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -32,7 +29,7 @@ CREATE TABLE IF NOT EXISTS quiz_session (
     INDEX idx_user (user_id, created_at)
 ) ENGINE=InnoDB;
 
--- 每题作答详情
+-- 2. 创建答题详情表
 CREATE TABLE IF NOT EXISTS quiz_answer (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     session_id BIGINT NOT NULL,
@@ -52,7 +49,7 @@ CREATE TABLE IF NOT EXISTS quiz_answer (
     INDEX idx_session (session_id)
 ) ENGINE=InnoDB;
 
--- 收藏题目表
+-- 3. 创建收藏表
 CREATE TABLE IF NOT EXISTS question_bookmark (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL COMMENT '用户ID',
@@ -69,7 +66,7 @@ CREATE TABLE IF NOT EXISTS question_bookmark (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB;
 
--- 错题分析结果缓存表
+-- 4. 创建错题分析缓存表
 CREATE TABLE IF NOT EXISTS wrong_analysis_cache (
     user_id BIGINT PRIMARY KEY,
     cache_hash VARCHAR(50) DEFAULT '0' COMMENT '缓存hash',
@@ -77,3 +74,15 @@ CREATE TABLE IF NOT EXISTS wrong_analysis_cache (
     updated_at DATETIME,
     FOREIGN KEY (user_id) REFERENCES user(id)
 ) ENGINE=InnoDB;
+
+-- 5. 添加 understood 字段（如果已存在会跳过）
+SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = 'znxsglTest' AND TABLE_NAME = 'quiz_answer' AND COLUMN_NAME = 'understood');
+SET @sql = IF(@col_exists = 0,
+    'ALTER TABLE quiz_answer ADD COLUMN understood TINYINT DEFAULT 0 COMMENT ''0未标记 1已明白'' AFTER modified_count',
+    'SELECT ''understood 已存在'' AS msg');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SELECT '数据库迁移完成！' AS msg;
