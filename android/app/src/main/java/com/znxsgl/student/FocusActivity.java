@@ -52,11 +52,7 @@ public class FocusActivity extends AppCompatActivity {
     private int lastPageIndex = -1;
     private Long latestSessionId;
 
-    private static final String[][] PANELS = {
-            {"☕","Java基础设计","#0A84FF"},{"📊","数据结构","#34C759"},
-            {"🌐","计算机网络","#5856D6"},{"🗄️","数据库","#5AC8FA"},
-            {"🇨🇳","思政通识","#FF2D55"},{"📚","人文通识","#FF9500"},
-    };
+    // 面板数据由学生课程动态生成，不再写死
 
     private final Runnable tick = () -> { seconds++; updateTimerDisplay(); handler.postDelayed(this.tick, 1000); };
     private final Runnable refreshToday = new Runnable() {
@@ -115,14 +111,16 @@ public class FocusActivity extends AppCompatActivity {
         return String.format(Locale.getDefault(), "%d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60);
     }
 
-    // ==== 6面板 ====
+    // ==== 6面板（Activity版用默认面板，主流程走Fragment）====
     private void initQuizPanels() {
+        String[][] panels = {{"☕","Java"},{"📊","数据结构"},{"🌐","计算机网络"},
+                {"🗄️","数据库"},{"🇨🇳","思政通识"},{"📚","人文通识"}};
         int[] ids = {R.id.quiz_panel_1, R.id.quiz_panel_2, R.id.quiz_panel_3,
                 R.id.quiz_panel_4, R.id.quiz_panel_5, R.id.quiz_panel_6};
         for (int i = 0; i < ids.length; i++) {
             FrameLayout frame = findViewById(ids[i]);
             if (frame == null) continue;
-            String[] p = PANELS[i];
+            String[] p = panels[i];
             LinearLayout c = new LinearLayout(this); c.setOrientation(LinearLayout.VERTICAL); c.setGravity(Gravity.CENTER);
             TextView ic = new TextView(this); ic.setText(p[0]); ic.setTextSize(28); ic.setGravity(Gravity.CENTER);
             TextView t = new TextView(this); t.setText(p[1]); t.setTextSize(13);
@@ -130,7 +128,7 @@ public class FocusActivity extends AppCompatActivity {
             c.addView(ic); c.addView(t);
             frame.addView(c, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
             final String name = p[1];
-            frame.setOnClickListener(v -> startQuiz(name));
+            frame.setOnClickListener(v -> showStartConfirm(name));
         }
     }
 
@@ -164,14 +162,27 @@ public class FocusActivity extends AppCompatActivity {
         }
     }
 
+    private void showStartConfirm(String subject) {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("开始学习")
+                .setMessage("是否开始学习「" + subject + "」？")
+                .setPositiveButton("是", (d, w) -> startQuiz(subject))
+                .setNegativeButton("否", null)
+                .show();
+    }
+
     private void startQuiz(String subject) {
-        Toast.makeText(this, "正在生成 " + subject + " 题目...", Toast.LENGTH_SHORT).show();
+        android.app.ProgressDialog loading = new android.app.ProgressDialog(this);
+        loading.setMessage("正在生成「" + subject + "」题目...");
+        loading.setCancelable(false);
+        loading.show();
         Map<String, String> body = new HashMap<>();
         body.put("subject", subject);
         body.put("subjectType", subject.contains("思政") || subject.contains("人文") ? "公共" : "专业");
         ApiService api = RetrofitClient.getInstance().create(ApiService.class);
         api.generateQuiz(token, body).enqueue(new Callback<Map<String, Object>>() {
             @Override public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> resp) {
+                loading.dismiss();
                 if (resp.isSuccessful() && resp.body() != null && resp.body().get("questions") != null) {
                     Long sid = resp.body().get("sessionId") instanceof Number
                             ? ((Number) resp.body().get("sessionId")).longValue() : null;
@@ -199,6 +210,7 @@ public class FocusActivity extends AppCompatActivity {
                 }
             }
             @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                loading.dismiss();
                 handler.post(() -> Toast.makeText(FocusActivity.this, "网络错误", Toast.LENGTH_SHORT).show());
             }
         });

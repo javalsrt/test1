@@ -2,8 +2,10 @@ package com.znxsgl.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.znxsgl.entity.QuestionBookmark;
 import com.znxsgl.entity.QuizAnswer;
 import com.znxsgl.entity.QuizSession;
+import com.znxsgl.mapper.QuestionBookmarkMapper;
 import com.znxsgl.mapper.QuizAnswerMapper;
 import com.znxsgl.mapper.QuizSessionMapper;
 import com.znxsgl.mapper.UserMapper;
@@ -23,15 +25,18 @@ public class QuizController {
     private final DashScopeService ai;
     private final QuizSessionMapper sessionMapper;
     private final QuizAnswerMapper answerMapper;
+    private final QuestionBookmarkMapper bookmarkMapper;
     private final UserMapper userMapper;
     private final JdbcTemplate jdbc;
     private final ObjectMapper json = new ObjectMapper();
 
     public QuizController(DashScopeService ai, QuizSessionMapper sessionMapper,
-                          QuizAnswerMapper answerMapper, UserMapper userMapper, JdbcTemplate jdbc) {
+                          QuizAnswerMapper answerMapper, QuestionBookmarkMapper bookmarkMapper,
+                          UserMapper userMapper, JdbcTemplate jdbc) {
         this.ai = ai;
         this.sessionMapper = sessionMapper;
         this.answerMapper = answerMapper;
+        this.bookmarkMapper = bookmarkMapper;
         this.userMapper = userMapper;
         this.jdbc = jdbc;
     }
@@ -151,7 +156,19 @@ public class QuizController {
 
         Map<String, Object> evalResult = parseEvalResult(evalRaw);
         if (evalResult != null) {
-            session.setScores(jsonValue(evalResult.get("scores")));
+            // 修复AI返回"N"表示无法评估的情况
+            Object scoresObj = evalResult.get("scores");
+            if (scoresObj instanceof Map) {
+                Map<String, Object> fixed = new LinkedHashMap<>();
+                for (Map.Entry<String, Object> e : ((Map<String, Object>) scoresObj).entrySet()) {
+                    Object v = e.getValue();
+                    if (!(v instanceof Number)) fixed.put(e.getKey(), 0); // "N"→0
+                    else fixed.put(e.getKey(), v);
+                }
+                scoresObj = fixed;
+                evalResult.put("scores", scoresObj);
+            }
+            session.setScores(jsonValue(scoresObj));
             session.setStrengths(jsonValue(evalResult.get("strengths")));
             session.setWeaknesses(jsonValue(evalResult.get("weaknesses")));
             session.setSuggestion((String) evalResult.get("suggestion"));
@@ -210,7 +227,7 @@ public class QuizController {
         }
         return String.format(
                 "学生：%s | 总题数：%d | 总耗时：%ds | 跳过：%d | 正确率趋势：%s/%s/%s\n作答：\n%s\n" +
-                "输出JSON：{\"scores\":{\"逻辑思维力\":N,\"判断决策力\":N,\"专注耐力\":N,\"专业学习力\":N,\"信息检索力\":N,\"自律执行力\":N}," +
+                "输出JSON(scores必须根据实际作答表现评分0-10)：{\"scores\":{\"逻辑思维力\":0,\"判断决策力\":0,\"专注耐力\":0,\"专业学习力\":0,\"信息检索力\":0,\"自律执行力\":0}," +
                 "\"strengths\":[],\"weaknesses\":[],\"suggestion\":\"\",\"study_plan\":[]}",
                 studentName, answers.size(), totalSec, skip, r1, r2, r3, ansText);
     }
@@ -309,5 +326,257 @@ public class QuizController {
 
     private String jsonValue(Object obj) {
         try { return json.writeValueAsString(obj); } catch (Exception e) { return "null"; }
+    }
+
+    // ===== 错题解析（带缓存） =====
+
+    /** 错题解析：缓存分析结果，错题数不变时直接返回缓存 */
+    @PostMapping("/wrong-analysis")
+    public ResponseEntity<Map<String, Object>> wrongAnalysis(Authentication auth) {
+        Long userId = (Long) auth.getPrincipal();
+        String studentName = getUserRealName(userId);
+
+        try {
+            // 1. 查询最新测评时间戳作为缓存key（只在新测试时失效）
+            String hashSQL = "SELECT COALESCE(MAX(s.id), 0) FROM quiz_session s " +
+                    "JOIN quiz_answer a ON a.session_id = s.id " +
+                    "WHERE s.user_id = ? AND (a.is_correct = 0 OR a.is_correct = -1 OR a.is_correct = -2)";
+            String currentHash = String.valueOf(jdbc.queryForObject(hashSQL, Integer.class, userId));
+
+            // 2. 检查缓存
+            Map<String, Object> cached = null;
+            try {
+                Map<String, Object> row = jdbc.queryForMap(
+                        "SELECT cache_hash, analysis_json FROM wrong_analysis_cache WHERE user_id = ?", userId);
+                String cachedHash = String.valueOf(row.get("cache_hash"));
+                String cachedJson = (String) row.get("analysis_json");
+                if (currentHash.equals(cachedHash) && cachedJson != null && !cachedJson.isEmpty()) {
+                    cached = json.readValue(cachedJson, Map.class);
+                }
+            } catch (Exception ignored) {}
+
+            if (cached != null) {
+                cached.put("cached", true);
+                System.out.println("=== 错题解析: 使用缓存（session_hash=" + currentHash + "）");
+                return ResponseEntity.ok(cached);
+            }
+
+            // 3. 新测试→重新分析
+            List<QuizAnswer> wrongList = answerMapper.findWrongByUser(userId);
+            if (wrongList.isEmpty()) {
+                return ResponseEntity.ok(Map.of("wrongCount", 0, "studentName", studentName,
+                        "summary", studentName + "同学暂时没有错题，表现优秀！"));
+            }
+
+            // 按科目分组（subject为空时兜底使用session.subject）
+            Map<String, List<QuizAnswer>> bySubject = new LinkedHashMap<>();
+            for (QuizAnswer a : wrongList) {
+                String raw = a.getSubject();
+                String subj;
+                if (raw != null && !raw.trim().isEmpty()) {
+                    subj = raw.trim();
+                } else {
+                    // 兜底：从session获取科目
+                    QuizSession sess = sessionMapper.selectById(a.getSessionId());
+                    String sessSubj = (sess != null) ? sess.getSubject() : null;
+                    subj = (sessSubj != null && !sessSubj.trim().isEmpty()) ? sessSubj.trim() : "其他";
+                }
+                bySubject.computeIfAbsent(subj, k -> new ArrayList<>()).add(a);
+            }
+
+            List<Map<String, Object>> stats = new ArrayList<>();
+            for (String subj : bySubject.keySet()) {
+                Map<String, Object> s = new LinkedHashMap<>();
+                s.put("subject", subj);
+                s.put("count", bySubject.get(subj).size());
+                stats.add(s);
+            }
+
+            StringBuilder prompt = new StringBuilder();
+            prompt.append("你是大学生学习导师。请分析以下学生的错题，对每题给出：\n");
+            prompt.append("1. 知识点解析  2. 学生错误原因  3. 改进建议\n\n");
+            prompt.append("学生：").append(studentName).append("\n");
+            prompt.append("错题总数：").append(wrongList.size()).append("，覆盖科目：");
+            prompt.append(String.join("、", bySubject.keySet())).append("\n\n");
+
+            int num = 1;
+            for (Map.Entry<String, List<QuizAnswer>> entry : bySubject.entrySet()) {
+                prompt.append("== ").append(entry.getKey()).append(" ==\n");
+                for (QuizAnswer a : entry.getValue()) {
+                    String status = a.getIsCorrect() != null && a.getIsCorrect() == -2 ? "（不会）" :
+                            a.getIsCorrect() != null && a.getIsCorrect() == -1 ? "（跳过）" : "（答错）";
+                    prompt.append(String.format("%d.[%s] %s %s\n  你的答案：%s\n  正确答案：%s\n  用时：%ds\n\n",
+                            num++, a.getQuestionType(), a.getQuestion(), status,
+                            a.getUserAnswer() != null ? a.getUserAnswer() : "未作答",
+                            a.getCorrectAnswer() != null ? a.getCorrectAnswer() : "",
+                            a.getDurationSec() != null ? a.getDurationSec() : 0));
+                }
+            }
+            prompt.append("输出JSON：{\"summary\":\"整体评价(100字内)\",\"bySubject\":[{\"subject\":\"科目\",\"analysis\":\"该科分析(150字)\",\"items\":[{\"question\":\"题目\",\"knowledge\":\"知识点\",\"errorReason\":\"错误原因\",\"improve\":\"改进建议\"}]}]}");
+
+            System.out.println("=== 错题解析 Prompt 长度: " + prompt.length());
+            String aiResp = ai.chat("你是一个学习分析助手，请用中文回答。", prompt.toString());
+            System.out.println("=== AI错题解析返回: " + aiResp.substring(0, Math.min(300, aiResp.length())));
+
+            Map<String, Object> eval = parseEvalResult(aiResp);
+            // 不依赖 AI 返回的 items 顺序，用 wrongList 重建（确保 answerId 100%准确）
+            List<Map<String, Object>> rebuiltSubjects = new ArrayList<>();
+            for (String subj : bySubject.keySet()) {
+                Map<String, Object> rs = new LinkedHashMap<>();
+                rs.put("subject", subj);
+                rs.put("count", bySubject.get(subj).size());
+                List<Map<String, Object>> rebuiltItems = new ArrayList<>();
+                for (QuizAnswer a : bySubject.get(subj)) {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("question", a.getQuestion() != null ? a.getQuestion() : "");
+                    item.put("answerId", a.getId());
+                    // 从 AI 结果中找到对应分析
+                    String aiKnowledge = "", aiError = "", aiImprove = "";
+                    if (eval != null && eval.get("bySubject") instanceof List) {
+                        for (Object so : (List<?>) eval.get("bySubject")) {
+                            Map<String, Object> aiSubj = (Map<String, Object>) so;
+                            if (subj.equals(aiSubj.get("subject"))) {
+                                if (aiSubj.get("items") instanceof List) {
+                                    for (Object io : (List<?>) aiSubj.get("items")) {
+                                        Map<String, Object> aiItem = (Map<String, Object>) io;
+                                        String aiQ = (String) aiItem.get("question");
+                                        String dbQ = a.getQuestion();
+                                        if (aiQ != null && dbQ != null &&
+                                                (dbQ.contains(aiQ) || aiQ.contains(dbQ.substring(0, Math.min(20, dbQ.length()))))) {
+                                            aiKnowledge = safeStr(aiItem, "knowledge");
+                                            aiError = safeStr(aiItem, "errorReason");
+                                            aiImprove = safeStr(aiItem, "improve");
+                                            break;
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    item.put("knowledge", aiKnowledge.isEmpty() ? "（分析生成中）" : aiKnowledge);
+                    item.put("errorReason", aiError.isEmpty() ? "（分析生成中）" : aiError);
+                    item.put("improve", aiImprove.isEmpty() ? "（分析生成中）" : aiImprove);
+                    rebuiltItems.add(item);
+                }
+                rs.put("items", rebuiltItems);
+                rebuiltSubjects.add(rs);
+            }
+
+            String summary = eval != null && eval.get("summary") != null
+                    ? eval.get("summary").toString() : aiResp;
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("wrongCount", wrongList.size());
+            result.put("bySubject", rebuiltSubjects);  // 使用重建的
+            result.put("studentName", studentName);
+            result.put("summary", summary);
+            result.put("cached", false);
+
+            // 4. 写入缓存
+            try {
+                String jsonStr = trimEvalResult(json.writeValueAsString(result));
+                jdbc.update("REPLACE INTO wrong_analysis_cache (user_id, cache_hash, analysis_json, updated_at) VALUES (?,?,?,NOW())",
+                        userId, currentHash, jsonStr);
+                System.out.println("=== 错题解析: 缓存已更新（session_hash=" + currentHash + "）");
+            } catch (Exception ignored) {}
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.ok(Map.of("error", "分析失败：" + e.getMessage()));
+        }
+    }
+
+    /** 截断过长的 JSON（防缓存撑爆） */
+    private String trimEvalResult(String json) {
+        if (json != null && json.length() > 50000) {
+            return json.substring(0, 50000);
+        }
+        return json;
+    }
+
+    // ===== 收藏 & 明白标记 =====
+
+    @PostMapping("/toggle-bookmark")
+    public ResponseEntity<Map<String, Object>> toggleBookmark(Authentication auth, @RequestBody Map<String, Object> body) {
+        Long userId = (Long) auth.getPrincipal();
+        try {
+            String question = safeStr(body, "question");
+            String subject = safeStr(body, "subject");
+            var existing = bookmarkMapper.findByUserAndQuestion(userId, question);
+            if (existing != null) {
+                bookmarkMapper.deleteById(existing.getId());
+                return ResponseEntity.ok(Map.of("bookmarked", false, "msg", "已取消收藏"));
+            }
+            QuestionBookmark bm = new QuestionBookmark();
+            bm.setUserId(userId);
+            bm.setQuestion(question);
+            bm.setSubject(subject);
+            bm.setQuestionType(safeStr(body, "questionType"));
+            bm.setUserAnswer(safeStr(body, "userAnswer"));
+            bm.setCorrectAnswer(safeStr(body, "correctAnswer"));
+            bm.setKnowledge(safeStr(body, "knowledge"));
+            bm.setErrorReason(safeStr(body, "errorReason"));
+            bm.setImprove(safeStr(body, "improve"));
+            bookmarkMapper.insert(bm);
+            // 收藏后也从错题分析移除（优先答案ID匹配）
+            Object aid = body.get("answerId");
+            if (aid instanceof Number && ((Number) aid).longValue() > 0) {
+                jdbc.update("UPDATE quiz_answer SET understood = 1 WHERE id = ?", ((Number) aid).longValue());
+            } else if (question != null && !question.isEmpty()) {
+                String key = question.length() > 60
+                        ? question.substring(0, 30) + question.substring(question.length() - 30)
+                        : question;
+                jdbc.update("UPDATE quiz_answer a JOIN quiz_session s ON a.session_id = s.id " +
+                        "SET a.understood = 1 WHERE s.user_id = ? " +
+                        "AND (a.question LIKE CONCAT('%',?,'%') OR ? LIKE CONCAT('%',a.question,'%'))",
+                        userId, key, key);
+            }
+            jdbc.update("DELETE FROM wrong_analysis_cache WHERE user_id = ?", userId);
+            return ResponseEntity.ok(Map.of("bookmarked", true, "msg", "已收藏"));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/mark-understood")
+    public ResponseEntity<Map<String, Object>> markUnderstood(Authentication auth, @RequestBody Map<String, Object> body) {
+        Long userId = (Long) auth.getPrincipal();
+        try {
+            // 优先用 answerId 精确匹配
+            Object aid = body.get("answerId");
+            int updated = 0;
+            if (aid instanceof Number && ((Number) aid).longValue() > 0) {
+                updated = jdbc.update("UPDATE quiz_answer SET understood = 1 WHERE id = ?", ((Number) aid).longValue());
+            } else {
+                // 降级：question 文本模糊匹配
+                String question = safeStr(body, "question");
+                String key = question.length() > 60
+                        ? question.substring(0, 30) + question.substring(question.length() - 30)
+                        : question;
+                updated = jdbc.update("UPDATE quiz_answer a JOIN quiz_session s ON a.session_id = s.id " +
+                        "SET a.understood = 1 WHERE s.user_id = ? " +
+                        "AND (a.question LIKE CONCAT('%',?,'%') OR ? LIKE CONCAT('%',a.question,'%'))",
+                        userId, key, key);
+            }
+            jdbc.update("DELETE FROM wrong_analysis_cache WHERE user_id = ?", userId);
+            System.out.println("=== mark-understood: userId=" + userId + " updated=" + updated);
+            return ResponseEntity.ok(Map.of("msg", "已标记", "updated", updated));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/bookmarks")
+    public ResponseEntity<List<QuestionBookmark>> bookmarks(Authentication auth) {
+        return ResponseEntity.ok(bookmarkMapper.findByUser((Long) auth.getPrincipal()));
+    }
+
+    private String getUserRealName(Long userId) {
+        try {
+            var u = userMapper.selectById(userId);
+            return u != null && u.getRealName() != null ? u.getRealName() : "同学";
+        } catch (Exception e) { return "同学"; }
     }
 }

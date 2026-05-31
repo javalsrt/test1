@@ -101,4 +101,23 @@ public interface ApiService {
     Call<Map<String, Object>> evaluateQuiz(
             @Header("Authorization") String token,
             @Body Map<String, Object> body);
+
+    @POST("/api/quiz/wrong-analysis")
+    Call<Map<String, Object>> getWrongAnalysis(
+            @Header("Authorization") String token,
+            @Body Map<String, String> body);
+
+    @POST("/api/quiz/toggle-bookmark")
+    Call<Map<String, Object>> toggleBookmark(
+            @Header("Authorization") String token,
+            @Body Map<String, String> body);
+
+    @POST("/api/quiz/mark-understood")
+    Call<Map<String, Object>> markUnderstood(
+            @Header("Authorization") String token,
+            @Body Map<String, String> body);
+
+    @GET("/api/quiz/bookmarks")
+    Call<List<Map<String, Object>>> getBookmarks(
+            @Header("Authorization") String token);
 }

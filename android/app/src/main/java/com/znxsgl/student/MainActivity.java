@@ -20,6 +20,7 @@ public class MainActivity extends AppCompatActivity {
 
     private FragmentManager fragmentManager;
     private Fragment currentFragment;
+    private FocusFragment focusFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,17 +35,30 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
-            if (id == R.id.nav_schedule) {
-                switchFragment(new ScheduleFragment());
-                return true;
-            } else if (id == R.id.nav_focus) {
-                switchFragment(new FocusFragment());
-                return true;
-            } else if (id == R.id.nav_profile) {
-                switchFragment(new ProfileFragment());
+            // 答题中切换：先弹窗确认
+            if (id != R.id.nav_focus && focusFragment != null && focusFragment.isQuizActive()) {
+                new android.app.AlertDialog.Builder(this)
+                        .setTitle("取消答题？")
+                        .setMessage("正在答题中，切换界面将取消本次测试，不记录成绩。")
+                        .setPositiveButton("确定取消", (d, w) -> {
+                            focusFragment.cancelQuiz();
+                            switchFragment(getFragmentById(id));
+                        })
+                        .setNegativeButton("继续答题", (d, w) -> {
+                            // 恢复导航栏选中状态为专注
+                            bottomNav.setSelectedItemId(R.id.nav_focus);
+                        })
+                        .setOnDismissListener(d -> {
+                            // 点击外部关闭时也要恢复
+                            if (focusFragment != null && focusFragment.isQuizActive()) {
+                                bottomNav.setSelectedItemId(R.id.nav_focus);
+                            }
+                        })
+                        .show();
                 return true;
             }
-            return false;
+            switchFragment(getFragmentById(id));
+            return true;
         });
 
         // 突出"专注"按钮：放大图标 + 上浮效果
@@ -140,6 +154,16 @@ public class MainActivity extends AppCompatActivity {
         WebSocketManager.getInstance().disconnect();
     }
 
+    private Fragment getFragmentById(int id) {
+        if (id == R.id.nav_schedule) return new ScheduleFragment();
+        if (id == R.id.nav_profile) return new ProfileFragment();
+        if (id == R.id.nav_focus) {
+            if (focusFragment == null) focusFragment = new FocusFragment();
+            return focusFragment;
+        }
+        return new FocusFragment();
+    }
+
     private void switchFragment(Fragment fragment) {
         if (fragment == currentFragment) return;
         FragmentTransaction transaction = fragmentManager.beginTransaction();
@@ -154,5 +178,7 @@ public class MainActivity extends AppCompatActivity {
         }
         transaction.commit();
         currentFragment = fragment;
+        // 跟踪 FocusFragment
+        if (fragment instanceof FocusFragment) focusFragment = (FocusFragment) fragment;
     }
 }

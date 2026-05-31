@@ -36,10 +36,8 @@
 
     <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
 
-    <TextView android:id="@+id/btn_submit" android:layout_width="match_parent"
-        android:layout_height="48dp" android:text="提交答案"
-        android:textSize="15sp" android:textColor="#FFFFFF"
-        android:gravity="center" android:layout_marginBottom="24dp"
-        android:background="@drawable/bg_btn_primary"
-        android:clickable="true" android:focusable="true" />
+    <TextView android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="↑ 下方长按提交 ↑"
+        android:textSize="11sp" android:textColor="#C7C7CC"
+        android:gravity="center" android:padding="12dp" />
 </LinearLayout>

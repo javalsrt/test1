@@ -2,12 +2,15 @@ package com.znxsgl.student.fragment;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,10 +20,12 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.znxsgl.student.CourseDetailActivity;
 import com.znxsgl.student.R;
 import com.znxsgl.student.model.StudentCourse;
+import com.znxsgl.student.R;
 import com.znxsgl.student.network.ApiService;
 import com.znxsgl.student.network.RetrofitClient;
 
@@ -74,9 +79,23 @@ public class ProfileFragment extends Fragment {
         tvName.setText(realName);
         tvInfo.setText("学号: " + username);
 
+        // 退出登录
+        view.findViewById(R.id.btn_logout).setOnClickListener(v -> {
+            prefs.edit().clear().apply();
+            com.znxsgl.student.network.WebSocketManager.getInstance().disconnect();
+            Intent intent = new Intent(getActivity(), com.znxsgl.student.LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            requireActivity().finish();
+        });
+
         // 学习时长
         tvStatHours = view.findViewById(R.id.tv_stat_hours);
         loadFocusTotal();
+
+        // 收藏题目入口
+        view.findViewById(R.id.ll_bookmarks).setOnClickListener(v -> showBookmarks());
+        loadBookmarkCount(view);
 
         // 课程列表
         rvCourses = view.findViewById(R.id.rv_courses);
@@ -109,7 +128,7 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // 跳过首次（onCreateView 已加载），之后从 CourseDetailActivity 返回时刷新
+        // 跳过首次（onCreateView 已加载），之后从 CourseDetailActivity 返回时刷新。不知道
         if (isFirstResume) {
             isFirstResume = false;
             return;
@@ -117,6 +136,7 @@ public class ProfileFragment extends Fragment {
         if (isAdded() && prefs != null) {
             loadCourses();
             loadFocusTotal();
+            loadBookmarkCount(getView());
         }
         // 实时轮询学习时长
         mainHandler.removeCallbacks(refreshFocusTotal);
@@ -139,6 +159,7 @@ public class ProfileFragment extends Fragment {
             // 切回此 Tab，立即刷新 + 启动定时刷新
             loadFocusTotal();
             loadCourses();
+            if (getView() != null) loadBookmarkCount(getView());
             mainHandler.removeCallbacks(refreshFocusTotal);
             mainHandler.post(refreshFocusTotal);
         }
@@ -170,6 +191,122 @@ public class ProfileFragment extends Fragment {
     /** 供 MainActivity WebSocket 回调，刷新课程列表 */
     public void loadCoursesIfAdded() {
         if (isAdded()) loadCourses();
+    }
+
+    /** 加载收藏数量 */
+    private void loadBookmarkCount(View view) {
+        String token = "Bearer " + prefs.getString("token", "");
+        RetrofitClient.getInstance().create(ApiService.class)
+                .getBookmarks(token).enqueue(new Callback<List<Map<String, Object>>>() {
+                    @Override public void onResponse(Call<List<Map<String, Object>>> c,
+                                                      Response<List<Map<String, Object>>> r) {
+                        if (!isAdded()) return;
+                        if (r.isSuccessful() && r.body() != null) {
+                            TextView tv = view.findViewById(R.id.tv_bookmark_count);
+                            if (tv != null) tv.setText(String.valueOf(r.body().size()));
+                        }
+                    }
+                    @Override public void onFailure(Call<List<Map<String, Object>>> c, Throwable t) {}
+                });
+    }
+
+    /** 展示收藏列表：ViewPager2 竖滑卡片（与错题分析一致） */
+    private void showBookmarks() {
+        if (!isAdded()) return;
+        String token = "Bearer " + prefs.getString("token", "");
+        android.app.ProgressDialog pd = new android.app.ProgressDialog(getContext());
+        pd.setMessage("加载中...");
+        pd.show();
+
+        RetrofitClient.getInstance().create(ApiService.class)
+                .getBookmarks(token).enqueue(new Callback<List<Map<String, Object>>>() {
+                    @Override public void onResponse(Call<List<Map<String, Object>>> c,
+                                                      Response<List<Map<String, Object>>> r) {
+                        pd.dismiss();
+                        if (!isAdded()) return;
+                        if (!r.isSuccessful() || r.body() == null || r.body().isEmpty()) {
+                            Toast.makeText(getContext(), "暂无收藏", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        List<Map<String, Object>> list = r.body();
+
+                        // inflate 错题分析式的全屏 Dialog
+                        View root = LayoutInflater.from(getContext())
+                                .inflate(R.layout.dialog_wrong_analysis, null);
+                        ViewPager2 vp = root.findViewById(R.id.vp_questions);
+                        root.findViewById(R.id.ll_subjects).setVisibility(View.GONE);
+                        root.findViewById(R.id.tv_page).setVisibility(View.GONE);
+
+                        vp.setOrientation(ViewPager2.ORIENTATION_VERTICAL);
+                        vp.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                            @NonNull @Override
+                            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int vt) {
+                                return new RecyclerView.ViewHolder(LayoutInflater.from(p.getContext())
+                                        .inflate(R.layout.item_wrong_question, p, false)) {};
+                            }
+                            @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int pos) {
+                                Map<String, Object> m = list.get(pos);
+                                String question = m.get("question") != null ? m.get("question").toString() : "";
+                                String error = m.get("errorReason") != null ? m.get("errorReason").toString() : "";
+                                String improve = m.get("improve") != null ? m.get("improve").toString() : "";
+                                // 把 question 显示在知识点的位置
+                                ((TextView) h.itemView.findViewById(R.id.tv_question)).setText(question);
+                                ((TextView) h.itemView.findViewById(R.id.tv_error)).setText(error);
+                                ((TextView) h.itemView.findViewById(R.id.tv_improve)).setText(improve);
+                            }
+                            @Override public int getItemCount() { return list.size(); }
+                        });
+
+                        // 关闭按钮
+                        root.findViewById(R.id.btn_close).setOnClickListener(v2 -> {
+                            ViewParent p = root.getParent();
+                            while (p != null && !(p instanceof android.app.Dialog)) p = p.getParent();
+                            if (p instanceof android.app.Dialog) ((android.app.Dialog) p).dismiss();
+                        });
+
+                        // 隐藏底部的明白了/收藏按钮
+                        root.findViewById(R.id.btn_understand).setVisibility(View.GONE);
+                        root.findViewById(R.id.btn_bookmark).setVisibility(View.GONE);
+
+                        // 页码
+                        final TextView tvPage = root.findViewById(R.id.tv_page);
+                        vp.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+                            @Override public void onPageSelected(int pos) {
+                                String subj = list.get(pos).get("subject") != null
+                                        ? list.get(pos).get("subject").toString() : "";
+                                tvPage.setVisibility(View.VISIBLE);
+                                tvPage.setText(subj + "  " + (pos + 1) + "/" + list.size());
+                            }
+                        });
+
+                        android.app.Dialog dlg = new android.app.Dialog(getContext(),
+                                android.R.style.Theme_Translucent_NoTitleBar);
+                        dlg.setContentView(root);
+                        dlg.setCanceledOnTouchOutside(true);
+                        dlg.setOnShowListener(d -> {
+                            android.view.Window w = dlg.getWindow();
+                            if (w != null) {
+                                w.getDecorView().setPadding(0,0,0,0);
+                                w.getDecorView().setBackgroundColor(Color.TRANSPARENT);
+                                w.getDecorView().setOutlineProvider(null);
+                                w.getDecorView().setElevation(0);
+                                android.view.WindowManager.LayoutParams lp = new android.view.WindowManager.LayoutParams();
+                                lp.copyFrom(w.getAttributes());
+                                lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                                lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                                lp.gravity = Gravity.CENTER;
+                                lp.dimAmount = 0f;
+                                w.setAttributes(lp);
+                                w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+                            }
+                        });
+                        dlg.show();
+                    }
+                    @Override public void onFailure(Call<List<Map<String, Object>>> c, Throwable t) {
+                        pd.dismiss();
+                    }
+                });
     }
 
     private void loadCourses() {

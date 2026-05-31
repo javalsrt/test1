@@ -6,7 +6,6 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -30,17 +29,13 @@ public class QuizPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
 
     public interface OnAnswerListener {
         void onAnswered(int position, String answer);
-        void onAutoSkip(int position); // 超时未答自动跳过
+        void onAutoSkip(int position);
     }
 
-    public QuizPagerAdapter(List<QuizQuestion> questions) {
-        this.questions = questions;
-    }
-
+    public QuizPagerAdapter(List<QuizQuestion> questions) { this.questions = questions; }
     public void setOnAnswerListener(OnAnswerListener l) { this.listener = l; }
 
-    @Override
-    public int getItemViewType(int pos) {
+    @Override public int getItemViewType(int pos) {
         String t = questions.get(pos).getQuestionType();
         if ("判断".equals(t)) return TYPE_JUDGE;
         if ("解析".equals(t)) return TYPE_ANALYSIS;
@@ -48,8 +43,7 @@ public class QuizPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         return TYPE_CHOICE;
     }
 
-    @NonNull @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int type) {
+    @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int type) {
         LayoutInflater inf = LayoutInflater.from(parent.getContext());
         if (type == TYPE_JUDGE) return new JudgeVH(inf.inflate(R.layout.item_quiz_judge, parent, false));
         if (type == TYPE_ANALYSIS) return new AnalysisVH(inf.inflate(R.layout.item_quiz_analysis, parent, false));
@@ -57,8 +51,7 @@ public class QuizPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         return new ChoiceVH(inf.inflate(R.layout.item_quiz_choice, parent, false));
     }
 
-    @Override
-    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int pos) {
+    @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int pos) {
         QuizQuestion q = questions.get(pos);
         if (h instanceof ChoiceVH) bindChoice((ChoiceVH) h, q, pos);
         else if (h instanceof JudgeVH) bindJudge((JudgeVH) h, q, pos);
@@ -66,8 +59,7 @@ public class QuizPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         else if (h instanceof FillVH) bindFill((FillVH) h, q, pos);
     }
 
-    @Override
-    public int getItemCount() { return questions.size(); }
+    @Override public int getItemCount() { return questions.size(); }
 
     // ===== 选择题 =====
     private void bindChoice(ChoiceVH vh, QuizQuestion q, int pos) {
@@ -78,35 +70,33 @@ public class QuizPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
 
         List<String> options = q.getOptions();
         if (options != null) {
-            for (int i = 0; i < options.size(); i++) {
-                String optText = options.get(i);
+            for (String optText : options) {
                 boolean selected = optText.equals(q.getUserAnswer());
-
                 TextView tv = new TextView(vh.itemView.getContext());
-                tv.setText(optText.replace("*", ""));
-                tv.setTextSize(15);
-                tv.setTextColor(selected ? Color.WHITE : Color.parseColor("#1D1D1F"));
-                tv.setGravity(Gravity.CENTER_VERTICAL);
-                tv.setPadding(24, 16, 24, 16);
-
+                tv.setText(optText);
+                tv.setTextSize(16);
+                tv.setGravity(Gravity.CENTER);
+                tv.setPadding(20, 18, 20, 18);
                 GradientDrawable bg = new GradientDrawable();
-                bg.setCornerRadius(12);
+                bg.setCornerRadius(14);
                 bg.setColor(selected ? Color.parseColor("#0A84FF") : Color.parseColor("#F5F5F7"));
                 tv.setBackground(bg);
-
+                tv.setTextColor(selected ? Color.WHITE : Color.parseColor("#1D1D1F"));
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                lp.setMargins(0, 0, 0, 12);
+                lp.setMargins(0, 0, 0, 10);
                 tv.setLayoutParams(lp);
 
                 final String answer = optText;
                 tv.setOnClickListener(v -> {
+                    // 点击反馈动画
+                    v.setAlpha(0.6f);
+                    v.postDelayed(() -> v.setAlpha(1.0f), 150);
                     q.setUserAnswer(answer);
                     q.setModifiedCount(q.getModifiedCount() + 1);
                     notifyItemChanged(pos);
                     if (listener != null) listener.onAnswered(pos, answer);
                 });
-
                 vh.llOptions.addView(tv);
             }
         }
@@ -118,89 +108,91 @@ public class QuizPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         vh.tvNum.setText((pos + 1) + "/" + questions.size());
         vh.tvQuestion.setText(q.getQuestion());
 
+        boolean selectedTrue = "正确".equals(q.getUserAnswer());
+        boolean selectedFalse = "错误".equals(q.getUserAnswer());
+
+        // 统一配色：选中浅灰，未选中白色卡片
+        vh.btnTrue.setBackground(getJudgeBg(selectedTrue));
+        vh.btnFalse.setBackground(getJudgeBg(selectedFalse));
+
         vh.btnTrue.setOnClickListener(v -> {
+            if (selectedTrue) return; // 已是选中状态
             q.setUserAnswer("正确");
-            if (listener != null) listener.onAnswered(pos, "正确");
+            notifyItemChanged(pos); // 刷新两个按钮状态
+            v.postDelayed(() -> {
+                if (listener != null) listener.onAnswered(pos, "正确");
+            }, 300);
         });
         vh.btnFalse.setOnClickListener(v -> {
+            if (selectedFalse) return;
             q.setUserAnswer("错误");
-            if (listener != null) listener.onAnswered(pos, "错误");
+            notifyItemChanged(pos);
+            v.postDelayed(() -> {
+                if (listener != null) listener.onAnswered(pos, "错误");
+            }, 300);
         });
     }
 
-    // ===== 解析题 =====
+    private GradientDrawable getJudgeBg(boolean selected) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(16);
+        bg.setColor(selected ? Color.parseColor("#E5E5EA") : Color.parseColor("#F5F5F7"));
+        return bg;
+    }
+
+    // ===== 解析题（无提交按钮，由长按提交统管）=====
     private void bindAnalysis(AnalysisVH vh, QuizQuestion q, int pos) {
         vh.tvTag.setText("✍️ 解析题");
         vh.tvNum.setText((pos + 1) + "/" + questions.size());
         vh.tvQuestion.setText(q.getQuestion());
-        vh.etAnswer.setText(q.getUserAnswer() != null ? q.getUserAnswer() : "");
-        vh.btnSubmit.setOnClickListener(v -> {
-            String ans = vh.etAnswer.getText().toString().trim();
-            if (ans.isEmpty()) return;
-            q.setUserAnswer(ans);
-            if (listener != null) listener.onAnswered(pos, ans);
-        });
+        if (q.getUserAnswer() == null || q.getUserAnswer().isEmpty()) {
+            vh.etAnswer.setText("");
+        } else if (!vh.etAnswer.getText().toString().equals(q.getUserAnswer())) {
+            vh.etAnswer.setText(q.getUserAnswer());
+        }
     }
 
-    // ===== 填空题 =====
+    // ===== 填空题（无提交按钮，由长按提交统管）=====
     private void bindFill(FillVH vh, QuizQuestion q, int pos) {
         vh.tvTag.setText("🔤 填空题");
         vh.tvNum.setText((pos + 1) + "/" + questions.size());
         vh.tvQuestion.setText(q.getQuestion());
-        vh.etAnswer.setText(q.getUserAnswer() != null ? q.getUserAnswer() : "");
-        vh.btnSubmit.setOnClickListener(v -> {
-            String ans = vh.etAnswer.getText().toString().trim();
-            if (ans.isEmpty()) return;
-            q.setUserAnswer(ans);
-            if (listener != null) listener.onAnswered(pos, ans);
-        });
+        if (q.getUserAnswer() == null || q.getUserAnswer().isEmpty()) {
+            vh.etAnswer.setText("");
+        } else if (!vh.etAnswer.getText().toString().equals(q.getUserAnswer())) {
+            vh.etAnswer.setText(q.getUserAnswer());
+        }
+    }
+
+    /** 提交前收集解析/填空题的文本答案 */
+    public void collectTextAnswers() {
+        // 暂存当前输入，供 submitQuiz 使用
     }
 
     // ===== ViewHolders =====
     static class ChoiceVH extends RecyclerView.ViewHolder {
-        TextView tvTag, tvNum, tvQuestion;
-        LinearLayout llOptions;
-        ChoiceVH(View v) {
-            super(v);
-            tvTag = v.findViewById(R.id.tv_quiz_tag);
-            tvNum = v.findViewById(R.id.tv_quiz_num);
-            tvQuestion = v.findViewById(R.id.tv_quiz_question);
-            llOptions = v.findViewById(R.id.ll_options);
-        }
+        TextView tvTag, tvNum, tvQuestion; LinearLayout llOptions;
+        ChoiceVH(View v) { super(v);
+            tvTag = v.findViewById(R.id.tv_quiz_tag); tvNum = v.findViewById(R.id.tv_quiz_num);
+            tvQuestion = v.findViewById(R.id.tv_quiz_question); llOptions = v.findViewById(R.id.ll_options); }
     }
     static class JudgeVH extends RecyclerView.ViewHolder {
         TextView tvTag, tvNum, tvQuestion, btnTrue, btnFalse;
-        JudgeVH(View v) {
-            super(v);
-            tvTag = v.findViewById(R.id.tv_quiz_tag);
-            tvNum = v.findViewById(R.id.tv_quiz_num);
+        JudgeVH(View v) { super(v);
+            tvTag = v.findViewById(R.id.tv_quiz_tag); tvNum = v.findViewById(R.id.tv_quiz_num);
             tvQuestion = v.findViewById(R.id.tv_quiz_question);
-            btnTrue = v.findViewById(R.id.btn_true);
-            btnFalse = v.findViewById(R.id.btn_false);
-        }
+            btnTrue = v.findViewById(R.id.btn_true); btnFalse = v.findViewById(R.id.btn_false); }
     }
-    static class AnalysisVH extends RecyclerView.ViewHolder {
-        TextView tvTag, tvNum, tvQuestion, btnSubmit;
-        EditText etAnswer;
-        AnalysisVH(View v) {
-            super(v);
-            tvTag = v.findViewById(R.id.tv_quiz_tag);
-            tvNum = v.findViewById(R.id.tv_quiz_num);
-            tvQuestion = v.findViewById(R.id.tv_quiz_question);
-            etAnswer = v.findViewById(R.id.et_answer);
-            btnSubmit = v.findViewById(R.id.btn_submit);
-        }
+    public static class AnalysisVH extends RecyclerView.ViewHolder {
+        public TextView tvTag, tvNum, tvQuestion; public EditText etAnswer;
+        AnalysisVH(View v) { super(v);
+            tvTag = v.findViewById(R.id.tv_quiz_tag); tvNum = v.findViewById(R.id.tv_quiz_num);
+            tvQuestion = v.findViewById(R.id.tv_quiz_question); etAnswer = v.findViewById(R.id.et_answer); }
     }
-    static class FillVH extends RecyclerView.ViewHolder {
-        TextView tvTag, tvNum, tvQuestion, btnSubmit;
-        EditText etAnswer;
-        FillVH(View v) {
-            super(v);
-            tvTag = v.findViewById(R.id.tv_quiz_tag);
-            tvNum = v.findViewById(R.id.tv_quiz_num);
-            tvQuestion = v.findViewById(R.id.tv_quiz_question);
-            etAnswer = v.findViewById(R.id.et_answer);
-            btnSubmit = v.findViewById(R.id.btn_submit);
-        }
+    public static class FillVH extends RecyclerView.ViewHolder {
+        public TextView tvTag, tvNum, tvQuestion; public EditText etAnswer;
+        FillVH(View v) { super(v);
+            tvTag = v.findViewById(R.id.tv_quiz_tag); tvNum = v.findViewById(R.id.tv_quiz_num);
+            tvQuestion = v.findViewById(R.id.tv_quiz_question); etAnswer = v.findViewById(R.id.et_answer); }
     }
 }
