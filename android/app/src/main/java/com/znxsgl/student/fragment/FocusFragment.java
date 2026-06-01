@@ -13,6 +13,7 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -65,7 +66,35 @@ public class FocusFragment extends Fragment {
     private Long latestSessionId;
 
     private final List<String[]> panelData = new ArrayList<>();
-    private static final String[] DEFAULT_ICONS = {"📖","💻","📱","🌐","🎨","🔧","✍️","🗣️","🎬","📋","👥","📜","🏛️","🛡️"};
+    // 课程图片映射
+    private static final int[] DEFAULT_COVERS = {
+        R.drawable.quiz_cover_programming, R.drawable.quiz_cover_datastruct,
+        R.drawable.quiz_cover_network, R.drawable.quiz_cover_database,
+        R.drawable.quiz_cover_politics, R.drawable.quiz_cover_humanities,
+        R.drawable.quiz_cover_wrong, R.drawable.quiz_cover_review
+    };
+
+    private int getCoverRes(String courseName) {
+        if (courseName == null) return DEFAULT_COVERS[0];
+        String n = courseName.toLowerCase();
+        if (n.contains("python") || n.contains("java") || n.contains("程序") || n.contains("网站") || n.contains("微课") || n.contains("多媒体") || n.contains("小程序"))
+            return R.drawable.quiz_cover_programming;
+        if (n.contains("数据") || n.contains("结构") || n.contains("算法"))
+            return R.drawable.quiz_cover_datastruct;
+        if (n.contains("网络") || n.contains("通信"))
+            return R.drawable.quiz_cover_network;
+        if (n.contains("数据库") || n.contains("sql") || n.contains("mysql"))
+            return R.drawable.quiz_cover_database;
+        if (n.contains("思政") || n.contains("马克思") || n.contains("毛概") || n.contains("近代史") || n.contains("形势"))
+            return R.drawable.quiz_cover_politics;
+        if (n.contains("人文") || n.contains("英语") || n.contains("心理") || n.contains("口语") || n.contains("书写") || n.contains("班主任"))
+            return R.drawable.quiz_cover_humanities;
+        if (n.contains("错题"))
+            return R.drawable.quiz_cover_wrong;
+        if (n.contains("复习"))
+            return R.drawable.quiz_cover_review;
+        return DEFAULT_COVERS[Math.abs(courseName.hashCode()) % DEFAULT_COVERS.length];
+    }
 
     private final Runnable tick = () -> { seconds++; if (tvTimerCorner != null) tvTimerCorner.setText(formatDuration(seconds)); handler.postDelayed(this.tick, 1000); };
 
@@ -156,29 +185,27 @@ public class FocusFragment extends Fragment {
                         } else { majors.add(name); }
                     }
                     for (int i = 0; i < Math.min(majors.size(), 4); i++)
-                        panelData.add(new String[]{getIcon(i), majors.get(i)});
+                        panelData.add(new String[]{majors.get(i), String.valueOf(i)});
                     if (!publics.isEmpty()) {
-                        panelData.add(new String[]{"🇨🇳", "思政通识"});
-                        panelData.add(new String[]{"📚", "人文通识"});
+                        panelData.add(new String[]{"思政通识", "politics"});
+                        panelData.add(new String[]{"人文通识", "humanities"});
                     }
                 }
                 // 补到6个以上，再加2个固定
-                while (panelData.size() < 6) panelData.add(new String[]{"📖", "学科综合"});
-                panelData.add(new String[]{"🔍", "错题解析"});
-                panelData.add(new String[]{"🔄", "复习加强"});
+                while (panelData.size() < 6) panelData.add(new String[]{"学科综合", ""});
+                panelData.add(new String[]{"错题解析", ""});
+                panelData.add(new String[]{"复习加强", ""});
                 handler.post(() -> buildPanels(view));
             }
             @Override public void onFailure(Call<List<StudentCourse>> call, Throwable t) {
                 if (!isAdded()) return;
-                String[][] def = {{"☕","Java"},{"📊","数据结构"},{"🌐","计算机网络"},
-                        {"🗄️","数据库"},{"🇨🇳","思政通识"},{"📚","人文通识"},{"🔍","错题解析"},{"🔄","复习加强"}};
+                String[][] def = {{"Java","0"},{"数据结构","1"},{"计算机网络","2"},
+                        {"数据库","3"},{"思政通识","4"},{"人文通识","5"},{"错题解析","6"},{"复习加强","7"}};
                 for (String[] d : def) panelData.add(d);
                 handler.post(() -> buildPanels(view));
             }
         });
     }
-
-    private String getIcon(int idx) { return DEFAULT_ICONS[idx % DEFAULT_ICONS.length]; }
 
     private void buildPanels(View view) {
         int[] ids = {R.id.quiz_panel_1,R.id.quiz_panel_2,R.id.quiz_panel_3,R.id.quiz_panel_4,
@@ -189,14 +216,30 @@ public class FocusFragment extends Fragment {
             frame.removeAllViews();
             if (i >= panelData.size()) continue;
             String[] p = panelData.get(i);
+            final String name = p[0];
+            int coverRes = getCoverRes(name);
+
             LinearLayout c = new LinearLayout(getContext());
             c.setOrientation(LinearLayout.VERTICAL); c.setGravity(Gravity.CENTER);
-            TextView ic = new TextView(getContext()); ic.setText(p[0]); ic.setTextSize(26); ic.setGravity(Gravity.CENTER);
-            TextView t = new TextView(getContext()); t.setText(p[1]); t.setTextSize(11);
-            t.setTextColor(Color.parseColor("#1D1D1F")); t.setGravity(Gravity.CENTER); t.setPadding(0,4,0,0);
-            c.addView(ic); c.addView(t);
+
+            // 课程插图
+            ImageView img = new ImageView(getContext());
+            int imgSize = dp(60);
+            LinearLayout.LayoutParams imgLp = new LinearLayout.LayoutParams(imgSize, imgSize);
+            img.setLayoutParams(imgLp);
+            img.setImageResource(coverRes);
+            img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            c.addView(img);
+
+            // 课程名称
+            TextView t = new TextView(getContext());
+            t.setText(name); t.setTextSize(11);
+            t.setTextColor(Color.parseColor("#1D1D1F")); t.setGravity(Gravity.CENTER);
+            t.setPadding(0, dp(4), 0, 0);
+            c.addView(t);
+
             frame.addView(c, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
-            final String name = p[1];
+
             if ("复习加强".equals(name)) {
                 frame.setOnClickListener(v -> Toast.makeText(getContext(), "复习加强模块开发中...", Toast.LENGTH_SHORT).show());
             } else if ("错题解析".equals(name)) {
@@ -205,6 +248,10 @@ public class FocusFragment extends Fragment {
                 frame.setOnClickListener(v -> showStartConfirm(name));
             }
         }
+    }
+
+    private int dp(int val) {
+        return (int) (val * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     // ===== 确认弹窗 → 加载 → 答题 =====
