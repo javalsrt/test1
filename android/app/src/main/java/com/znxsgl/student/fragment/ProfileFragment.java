@@ -128,11 +128,6 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // 跳过首次（onCreateView 已加载），之后从 CourseDetailActivity 返回时刷新。不知道
-        if (isFirstResume) {
-            isFirstResume = false;
-            return;
-        }
         if (isAdded() && prefs != null) {
             loadCourses();
             loadFocusTotal();
