@@ -306,7 +306,6 @@ public class ProfileFragment extends Fragment {
 
     private void loadCourses() {
         String token = prefs.getString("token", "");
-        Toast.makeText(getContext(), "正在加载课程... token=" + (token.isEmpty() ? "空!" : "OK"), Toast.LENGTH_SHORT).show();
         ApiService api = RetrofitClient.getInstance().create(ApiService.class);
         api.getStudentCourses("Bearer " + token).enqueue(new Callback<List<StudentCourse>>() {
             @Override
@@ -320,7 +319,6 @@ public class ProfileFragment extends Fragment {
                     restoreCourseOrder();
                     adapter.notifyDataSetChanged();
                     rvCourses.requestLayout();
-                    Toast.makeText(getContext(), "已加载" + courseList.size() + "门课", Toast.LENGTH_SHORT).show();
                 });
             }
             @Override
