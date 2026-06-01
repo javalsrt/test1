@@ -32,9 +32,6 @@
             android:exported="false"
             android:parentActivityName=".MainActivity"
             android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".FocusActivity"
-            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -301,7 +301,7 @@ public class FocusFragment extends Fragment {
                             quizQuestions.add(q);
                         }
                         quizAdapter.notifyDataSetChanged();
-                        llPanels.setVisibility(View.GONE);
+                        if (rvQuizPanels != null) rvQuizPanels.setVisibility(View.GONE);
                         llQuizArea.setVisibility(View.VISIBLE);
                         lastPageIndex=0; lastPageEntryTime=System.currentTimeMillis();
                         quizActive = true;
@@ -368,7 +368,8 @@ public class FocusFragment extends Fragment {
                 if (!isAdded()) return;
                 handler.post(() -> {
                     quizQuestions.clear(); quizAdapter.notifyDataSetChanged();
-                    llQuizArea.setVisibility(View.GONE); llPanels.setVisibility(View.VISIBLE);
+                    llQuizArea.setVisibility(View.GONE);
+                    if (rvQuizPanels != null) rvQuizPanels.setVisibility(View.VISIBLE);
                     quizActive = false;
                     Toast.makeText(getContext(),"测评完成",Toast.LENGTH_SHORT).show();
                 });
@@ -388,7 +389,7 @@ public class FocusFragment extends Fragment {
         quizQuestions.clear();
         if (quizAdapter != null) quizAdapter.notifyDataSetChanged();
         if (llQuizArea != null) llQuizArea.setVisibility(View.GONE);
-        if (llPanels != null) llPanels.setVisibility(View.VISIBLE);
+        if (rvQuizPanels != null) rvQuizPanels.setVisibility(View.VISIBLE);
     }
 
     /**
