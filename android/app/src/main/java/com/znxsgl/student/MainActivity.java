@@ -77,15 +77,15 @@ public class MainActivity extends AppCompatActivity {
                 // 找到"专注"对应的 tab（索引1）
                 if (i == 1) {
                     // 整体放大
-                    tab.setScaleX(1.15f);
-                    tab.setScaleY(1.15f);
-                    tab.setTranslationY(-3f);
+                    tab.setScaleX(1.12f);
+                    tab.setScaleY(1.12f);
+                    tab.setTranslationY(-2f);
 
                     // 给专注 tab 添加圆形背景
                     android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
                     bg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
                     bg.setColor(0xFF0A84FF);
-                    bg.setSize(dp(44), dp(44));
+                    bg.setSize(dp(40), dp(40));
 
                     // 找到 tab 内的图标
                     if (tab instanceof android.view.ViewGroup) {

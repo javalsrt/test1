@@ -98,6 +98,12 @@ public class ScheduleFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_schedule, container, false);
+        // 状态栏白色延伸
+        View statusBar = view.findViewById(R.id.v_status_bar);
+        if (statusBar != null) {
+            int id = getResources().getIdentifier("status_bar_height", "dimen", "android");
+            if (id > 0) statusBar.getLayoutParams().height = getResources().getDimensionPixelSize(id);
+        }
         tvWeekLabel = view.findViewById(R.id.tv_week_label);
         tvDateInfo = view.findViewById(R.id.tv_date_info);
         btnToday = view.findViewById(R.id.btn_today);

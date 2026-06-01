@@ -12,16 +12,14 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="48dp"
         android:layout_gravity="bottom"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginBottom="12dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="16dp"
         android:background="@drawable/bg_nav_glass"
         android:elevation="0dp"
         app:itemIconSize="20dp"
-        app:itemTextAppearanceInactive="@style/NavTextStyle"
-        app:itemTextAppearanceActive="@style/NavTextStyle"
-        app:labelVisibilityMode="labeled"
+        app:labelVisibilityMode="unlabeled"
         app:menu="@menu/bottom_nav_menu" />
 
 </FrameLayout>
