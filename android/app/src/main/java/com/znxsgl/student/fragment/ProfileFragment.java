@@ -311,14 +311,15 @@ public class ProfileFragment extends Fragment {
         api.getStudentCourses("Bearer " + token).enqueue(new Callback<List<StudentCourse>>() {
             @Override
             public void onResponse(Call<List<StudentCourse>> call, Response<List<StudentCourse>> resp) {
-                Toast.makeText(getContext(), "课程API返回: code=" + resp.code() + " 数量=" + (resp.body() != null ? resp.body().size() : 0), Toast.LENGTH_SHORT).show();
                 List<StudentCourse> items = (resp.isSuccessful() && resp.body() != null)
                         ? resp.body() : new ArrayList<>();
-                mainHandler.post(() -> {
+                if (!isAdded()) return;
+                requireActivity().runOnUiThread(() -> {
                     courseList.clear();
                     courseList.addAll(items);
                     restoreCourseOrder();
                     adapter.notifyDataSetChanged();
+                    Toast.makeText(getContext(), "已加载" + courseList.size() + "门课", Toast.LENGTH_SHORT).show();
                 });
             }
             @Override
