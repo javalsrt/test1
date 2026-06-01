@@ -1,5 +1,7 @@
 package com.znxsgl.student.fragment;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -52,6 +54,7 @@ public class ScheduleFragment extends Fragment {
 
     private int currentWeek = 13;
     private int todayDayOfWeek = 1; // 1=周一 ... 7=周日
+    private boolean isAnimating = false;
     private List<ScheduleItem> apiScheduleData = new ArrayList<>();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -153,8 +156,8 @@ public class ScheduleFragment extends Fragment {
                     case MotionEvent.ACTION_CANCEL:
                         float totalDx = event.getX() - startX;
                         if (isSwiping && Math.abs(totalDx) > 60) {
-                            if (totalDx < 0 && currentWeek < 18) { currentWeek++; refreshAll(); }
-                            else if (totalDx > 0 && currentWeek > 1) { currentWeek--; refreshAll(); }
+                            if (totalDx < 0 && currentWeek < 18) animateWeekChange(1);
+                            else if (totalDx > 0 && currentWeek > 1) animateWeekChange(-1);
                         }
                         v.getParent().requestDisallowInterceptTouchEvent(false);
                         isSwiping = false;
@@ -166,8 +169,40 @@ public class ScheduleFragment extends Fragment {
         return view;
     }
 
+    // ========== 滑动切换动画 ==========
+    private void animateWeekChange(int direction) {
+        if (isAnimating || scrollGrid == null || scrollGrid.getWidth() <= 0) {
+            // 降级：无动画
+            currentWeek += direction;
+            refreshAll();
+            return;
+        }
+        isAnimating = true;
+        View content = scrollGrid.getChildAt(0);
+        int w = scrollGrid.getWidth();
+
+        content.animate()
+            .translationX(-direction * w * 0.5f)
+            .alpha(0.3f)
+            .setDuration(120)
+            .setListener(new AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(Animator a) {
+                    currentWeek += direction;
+                    buildHeader();
+                    buildWeekSelector();
+                    // 预置到对面
+                    content.setTranslationX(direction * w * 0.5f);
+                    fetchScheduleAnimated(currentWeek, content, direction, w);
+                }
+            }).start();
+    }
+
     // ========== API 请求 ==========
     private void fetchSchedule(int week) {
+        fetchScheduleAnimated(week, null, 0, 0);
+    }
+
+    private void fetchScheduleAnimated(int week, View content, int direction, int width) {
         SharedPreferences prefs = requireActivity().getSharedPreferences("znxsgl", 0);
         String token = prefs.getString("token", "");
 
@@ -180,14 +215,32 @@ public class ScheduleFragment extends Fragment {
                 } else {
                     apiScheduleData = new ArrayList<>();
                 }
-                mainHandler.post(() -> buildScheduleGrid());
+                mainHandler.post(() -> {
+                    buildScheduleGrid();
+                    if (content != null) {
+                        content.animate()
+                            .translationX(0).alpha(1f)
+                            .setDuration(150)
+                            .setListener(new AnimatorListenerAdapter() {
+                                @Override public void onAnimationEnd(Animator a) {
+                                    isAnimating = false;
+                                }
+                            }).start();
+                    }
+                });
             }
             @Override
             public void onFailure(Call<List<ScheduleItem>> call, Throwable t) {
                 apiScheduleData = new ArrayList<>();
                 mainHandler.post(() -> {
-                    Toast.makeText(getContext(), "无法连接服务器，显示静态课表", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "无法连接服务器", Toast.LENGTH_SHORT).show();
                     buildScheduleGrid();
+                    if (content != null) {
+                        content.animate().translationX(0).alpha(1f).setDuration(150)
+                            .setListener(new AnimatorListenerAdapter() {
+                                @Override public void onAnimationEnd(Animator a) { isAnimating = false; }
+                            }).start();
+                    }
                 });
             }
         });
