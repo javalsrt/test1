@@ -137,15 +137,17 @@ public class ScheduleService {
         if (user == null || user.getClassId() == null) return Collections.emptyList();
         Long classId = user.getClassId();
 
-        // 查询该班级关联的所有课程（通过 course_class 表）
+        // 查询该班级关联的所有课程（通过 course_class 表 + schedule 表兜底）
         List<Map<String, Object>> rows = jdbc.queryForList(
-            "SELECT c.id, c.course_name, c.semester, c.course_type, c.description, c.credit, " +
+            "SELECT DISTINCT c.id, c.course_name, c.semester, c.course_type, c.description, c.credit, " +
             "t.real_name AS teacher_name " +
             "FROM course c " +
-            "JOIN course_class cc ON cc.course_id = c.id AND cc.class_id = ? " +
+            "LEFT JOIN course_class cc ON cc.course_id = c.id AND cc.class_id = ? " +
+            "LEFT JOIN schedule s ON s.course_id = c.id AND s.user_id IN (SELECT id FROM user WHERE class_id = ?) " +
             "LEFT JOIN teacher t ON t.id = c.teacher_id " +
+            "WHERE cc.class_id = ? OR s.id IS NOT NULL " +
             "ORDER BY c.course_name",
-            classId);
+            classId, classId, classId);
 
         List<StudentCourseDTO> result = new ArrayList<>();
         for (Map<String, Object> row : rows) {

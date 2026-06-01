@@ -11,7 +11,7 @@
  Target Server Version : 80028 (8.0.28)
  File Encoding         : 65001
 
- Date: 01/06/2026 20:26:04
+ Date: 01/06/2026 22:09:44
 */
 
 SET NAMES utf8mb4;
@@ -309,7 +309,7 @@ CREATE TABLE `course_class`  (
   INDEX `class_id`(`class_id` ASC) USING BTREE,
   CONSTRAINT `course_class_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `course` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `course_class_ibfk_2` FOREIGN KEY (`class_id`) REFERENCES `class_info` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 177 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程-班级关联表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 178 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程-班级关联表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of course_class
