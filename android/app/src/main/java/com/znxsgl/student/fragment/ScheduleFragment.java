@@ -123,18 +123,28 @@ public class ScheduleFragment extends Fragment {
         buildWeekSelector();
         fetchSchedule(currentWeek);
 
-        view.setOnTouchListener(new View.OnTouchListener() {
-            private float downX;
+        // 左右滑动切换周次
+        gridBody.setOnTouchListener(new View.OnTouchListener() {
+            private float downX, downY;
+            private boolean swiping;
             @Override public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN: downX = event.getX(); return true;
+                    case MotionEvent.ACTION_DOWN:
+                        downX = event.getX(); downY = event.getY(); swiping = false;
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        if (!swiping && Math.abs(event.getX() - downX) > 30 && Math.abs(event.getX() - downX) > Math.abs(event.getY() - downY)) {
+                            swiping = true;
+                            v.getParent().requestDisallowInterceptTouchEvent(true);
+                        }
+                        return swiping;
                     case MotionEvent.ACTION_UP:
                         float dx = event.getX() - downX;
-                        if (Math.abs(dx) > 80) {
-                            if (dx < 0 && currentWeek < 18) currentWeek++;
-                            else if (dx > 0 && currentWeek > 1) currentWeek--;
-                            refreshAll();
+                        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(event.getY() - downY)) {
+                            if (dx < 0 && currentWeek < 18) { currentWeek++; refreshAll(); }
+                            else if (dx > 0 && currentWeek > 1) { currentWeek--; refreshAll(); }
                         }
+                        v.getParent().requestDisallowInterceptTouchEvent(false);
                         return true;
                 }
                 return false;
