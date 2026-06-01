@@ -14,6 +14,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.GridLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -47,6 +48,7 @@ public class ScheduleFragment extends Fragment {
     private TextView tvWeekLabel, tvDateInfo, btnToday;
     private LinearLayout containerWeeks, gridBody;
     private LinearLayout rowHeader;
+    private HorizontalScrollView scrollGrid;
 
     private int currentWeek = 13;
     private int todayDayOfWeek = 1; // 1=周一 ... 7=周日
@@ -99,6 +101,7 @@ public class ScheduleFragment extends Fragment {
         containerWeeks = view.findViewById(R.id.container_weeks);
         gridBody = view.findViewById(R.id.grid_body);
         rowHeader = view.findViewById(R.id.row_header);
+        scrollGrid = view.findViewById(R.id.scroll_grid);
 
         // 计算真实日期和周次
         Calendar cal = Calendar.getInstance();
@@ -123,31 +126,41 @@ public class ScheduleFragment extends Fragment {
         buildWeekSelector();
         fetchSchedule(currentWeek);
 
-        // 左右滑动切换周次
-        gridBody.setOnTouchListener(new View.OnTouchListener() {
-            private float downX, downY;
-            private boolean swiping;
-            @Override public boolean onTouch(View v, MotionEvent event) {
+        // 左右滑动切换周次（在 ScrollView 上检测，优先级高于滚动）
+        scrollGrid.setOnTouchListener(new View.OnTouchListener() {
+            private float startX, startY;
+            private boolean isSwiping = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        downX = event.getX(); downY = event.getY(); swiping = false;
-                        return true;
+                        startX = event.getX();
+                        startY = event.getY();
+                        isSwiping = false;
+                        break;
                     case MotionEvent.ACTION_MOVE:
-                        if (!swiping && Math.abs(event.getX() - downX) > 30 && Math.abs(event.getX() - downX) > Math.abs(event.getY() - downY)) {
-                            swiping = true;
+                        float dx = Math.abs(event.getX() - startX);
+                        float dy = Math.abs(event.getY() - startY);
+                        // 确认是横向滑动后，禁止 ScrollView 拦截
+                        if (!isSwiping && dx > dy && dx > 20) {
+                            isSwiping = true;
                             v.getParent().requestDisallowInterceptTouchEvent(true);
                         }
-                        return swiping;
+                        if (isSwiping) return true;
+                        break;
                     case MotionEvent.ACTION_UP:
-                        float dx = event.getX() - downX;
-                        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(event.getY() - downY)) {
-                            if (dx < 0 && currentWeek < 18) { currentWeek++; refreshAll(); }
-                            else if (dx > 0 && currentWeek > 1) { currentWeek--; refreshAll(); }
+                    case MotionEvent.ACTION_CANCEL:
+                        float totalDx = event.getX() - startX;
+                        if (isSwiping && Math.abs(totalDx) > 60) {
+                            if (totalDx < 0 && currentWeek < 18) { currentWeek++; refreshAll(); }
+                            else if (totalDx > 0 && currentWeek > 1) { currentWeek--; refreshAll(); }
                         }
                         v.getParent().requestDisallowInterceptTouchEvent(false);
-                        return true;
+                        isSwiping = false;
+                        break;
                 }
-                return false;
+                return isSwiping;
             }
         });
         return view;
