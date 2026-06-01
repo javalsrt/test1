@@ -199,7 +199,7 @@ public class ScheduleFragment extends Fragment {
         for (int i = 0; i < 7; i++) {
             String dateStr = sdf.format(cal.getTime());
             String label = DAY_NAMES[i] + "\n" + dateStr;
-            boolean isToday = (i == todayIdx);
+            boolean isToday = (currentWeek == getCurrentWeek()) && (i == todayIdx);
             
             LinearLayout cell = new LinearLayout(getContext());
             cell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(36), 1));
@@ -341,6 +341,15 @@ public class ScheduleFragment extends Fragment {
         cell.setGravity(Gravity.CENTER);
         cell.setPadding(dp(2), dp(2), dp(2), dp(2));
 
+        // 只在当前周高亮今天列
+        boolean isToday = (currentWeek == getCurrentWeek()) && (dayOfWeek == todayDayOfWeek);
+        if (isToday) {
+            GradientDrawable todayBg = new GradientDrawable();
+            todayBg.setColor(0xFFF0F4FF);
+            todayBg.setCornerRadius(dp(4));
+            cell.setBackground(todayBg);
+        }
+
         // 查找匹配的课程
         String courseName = null;
         String classroom = null;
@@ -353,35 +362,59 @@ public class ScheduleFragment extends Fragment {
         }
 
         if (courseName != null) {
-            GradientDrawable bg = new GradientDrawable();
             int baseColor = COURSE_COLORS[Math.abs(courseName.hashCode()) % COURSE_COLORS.length];
-            bg.setColor(baseColor);
-            bg.setCornerRadius(dp(6));
-            // 今天课程加蓝色左边框
-            if (dayOfWeek == todayDayOfWeek) {
-                bg.setStroke(dp(3), 0xFF5E6AD2);
-            }
-            cell.setBackground(bg);
-
-            TextView tvName = new TextView(getContext());
-            tvName.setText(courseName); tvName.setTextSize(10);
-            tvName.setTextColor(0xFF1D1D1F); tvName.setGravity(Gravity.CENTER);
-            tvName.setMaxLines(2);
-            cell.addView(tvName);
-
-            if (classroom != null && !classroom.isEmpty()) {
-                TextView tvRoom = new TextView(getContext());
-                // 截短教室名
-                String shortRoom = classroom.length() > 10 ? classroom.substring(0, 9) + "…" : classroom;
-                tvRoom.setText(shortRoom); tvRoom.setTextSize(8);
-                tvRoom.setTextColor(0xFF86868B); tvRoom.setGravity(Gravity.CENTER);
-                tvRoom.setMaxLines(1);
-                cell.addView(tvRoom);
+            
+            if (currentWeek == getCurrentWeek() && dayOfWeek == todayDayOfWeek) {
+                // 今天列：左边加蓝条 + 课程颜色卡片
+                cell.setOrientation(LinearLayout.HORIZONTAL);
+                View strip = new View(getContext());
+                strip.setLayoutParams(new LinearLayout.LayoutParams(dp(3), LinearLayout.LayoutParams.MATCH_PARENT));
+                strip.setBackgroundColor(0xFF5E6AD2);
+                cell.addView(strip);
+                // 内嵌卡片
+                LinearLayout card = new LinearLayout(getContext());
+                card.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1));
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setGravity(Gravity.CENTER);
+                GradientDrawable cardBg = new GradientDrawable();
+                cardBg.setColor(baseColor); cardBg.setCornerRadius(dp(6));
+                card.setBackground(cardBg);
+                
+                TextView tvName = new TextView(getContext());
+                tvName.setText(courseName); tvName.setTextSize(10);
+                tvName.setTextColor(0xFF1D1D1F); tvName.setGravity(Gravity.CENTER);
+                tvName.setMaxLines(2);
+                card.addView(tvName);
+                if (classroom != null && !classroom.isEmpty()) {
+                    String shortRoom = classroom.length() > 10 ? classroom.substring(0, 9) + "…" : classroom;
+                    TextView tvRoom = new TextView(getContext());
+                    tvRoom.setText(shortRoom); tvRoom.setTextSize(8);
+                    tvRoom.setTextColor(0xFF86868B); tvRoom.setGravity(Gravity.CENTER);
+                    tvRoom.setMaxLines(1);
+                    card.addView(tvRoom);
+                }
+                cell.addView(card);
+            } else {
+                GradientDrawable bg = new GradientDrawable();
+                bg.setColor(baseColor); bg.setCornerRadius(dp(6));
+                cell.setBackground(bg);
+                TextView tvName = new TextView(getContext());
+                tvName.setText(courseName); tvName.setTextSize(10);
+                tvName.setTextColor(0xFF1D1D1F); tvName.setGravity(Gravity.CENTER);
+                tvName.setMaxLines(2);
+                cell.addView(tvName);
+                if (classroom != null && !classroom.isEmpty()) {
+                    String shortRoom = classroom.length() > 10 ? classroom.substring(0, 9) + "…" : classroom;
+                    TextView tvRoom = new TextView(getContext());
+                    tvRoom.setText(shortRoom); tvRoom.setTextSize(8);
+                    tvRoom.setTextColor(0xFF86868B); tvRoom.setGravity(Gravity.CENTER);
+                    tvRoom.setMaxLines(1);
+                    cell.addView(tvRoom);
+                }
             }
         } else {
             GradientDrawable bg = new GradientDrawable();
-            int emptyBg = (dayOfWeek == todayDayOfWeek) ? 0xFFF5F7FF : 0xFFFAFAFA;
-            bg.setColor(emptyBg); bg.setCornerRadius(dp(6));
+            bg.setColor(0xFFFAFAFA); bg.setCornerRadius(dp(6));
             cell.setBackground(bg);
         }
         return cell;
@@ -464,6 +497,9 @@ public class ScheduleFragment extends Fragment {
     }
 
     private void refreshAll() {
+        Calendar cal = Calendar.getInstance();
+        todayDayOfWeek = (cal.get(Calendar.DAY_OF_WEEK) + 6) % 7;
+        if (todayDayOfWeek == 0) todayDayOfWeek = 7;
         buildWeekSelector();
         fetchSchedule(currentWeek);
     }
