@@ -64,55 +64,12 @@
     <!-- 切换容器 -->
     <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
 
-        <!-- 8面板网格 -->
-        <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
-        <LinearLayout android:id="@+id/ll_panels"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="16dp" android:paddingTop="16dp" android:paddingBottom="24dp">
-
-            <!-- 第1行 -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:layout_marginBottom="12dp">
-                <FrameLayout android:id="@+id/quiz_panel_1" android:layout_width="0dp"
-                    android:layout_height="0dp" android:layout_weight="1" android:layout_marginEnd="12dp"
-                    android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
-                <FrameLayout android:id="@+id/quiz_panel_2" android:layout_width="0dp"
-                    android:layout_height="0dp" android:layout_weight="1"
-                    android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
-            </LinearLayout>
-            <!-- 第2行 -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:layout_marginBottom="12dp">
-                <FrameLayout android:id="@+id/quiz_panel_3" android:layout_width="0dp"
-                    android:layout_height="0dp" android:layout_weight="1" android:layout_marginEnd="12dp"
-                    android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
-                <FrameLayout android:id="@+id/quiz_panel_4" android:layout_width="0dp"
-                    android:layout_height="0dp" android:layout_weight="1"
-                    android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
-            </LinearLayout>
-            <!-- 第3行 -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:layout_marginBottom="12dp">
-                <FrameLayout android:id="@+id/quiz_panel_5" android:layout_width="0dp"
-                    android:layout_height="0dp" android:layout_weight="1" android:layout_marginEnd="12dp"
-                    android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
-                <FrameLayout android:id="@+id/quiz_panel_6" android:layout_width="0dp"
-                    android:layout_height="0dp" android:layout_weight="1"
-                    android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
-            </LinearLayout>
-            <!-- 第4行 -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <FrameLayout android:id="@+id/quiz_panel_7" android:layout_width="0dp"
-                    android:layout_height="0dp" android:layout_weight="1" android:layout_marginEnd="12dp"
-                    android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
-                <FrameLayout android:id="@+id/quiz_panel_8" android:layout_width="0dp"
-                    android:layout_height="0dp" android:layout_weight="1"
-                    android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
-            </LinearLayout>
-        </LinearLayout>
-        </ScrollView>
+        <!-- 课程网格（动态2列） -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_quiz_panels"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:paddingHorizontal="16dp" android:paddingTop="16dp" android:paddingBottom="24dp"
+            android:clipToPadding="false" />
 
         <!-- 答题区 -->
         <LinearLayout android:id="@+id/ll_quiz_area"

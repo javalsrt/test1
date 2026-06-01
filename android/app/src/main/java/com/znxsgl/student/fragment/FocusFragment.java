@@ -22,6 +22,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.fragment.app.Fragment;
@@ -52,7 +53,8 @@ import retrofit2.Response;
 public class FocusFragment extends Fragment {
 
     private TextView tvTimerCorner, tvToday, tvLast;
-    private View llPanels, llQuizArea;
+    private RecyclerView rvQuizPanels;
+    private View llQuizArea;
     private ViewPager2 viewPagerQuiz;
     private Handler handler = new Handler(Looper.getMainLooper());
     private int seconds;
@@ -113,7 +115,7 @@ public class FocusFragment extends Fragment {
             tvTimerCorner = view.findViewById(R.id.tv_timer_corner);
             tvToday = view.findViewById(R.id.tv_today);
             tvLast = view.findViewById(R.id.tv_last);
-            llPanels = view.findViewById(R.id.ll_panels);
+            rvQuizPanels = view.findViewById(R.id.rv_quiz_panels);
             llQuizArea = view.findViewById(R.id.ll_quiz_area);
             viewPagerQuiz = view.findViewById(R.id.viewpager_quiz);
 
@@ -175,100 +177,78 @@ public class FocusFragment extends Fragment {
                 if (!isAdded()) return;
                 panelData.clear();
                 if (resp.isSuccessful() && resp.body() != null) {
-                    List<String> majors = new ArrayList<>(), publics = new ArrayList<>();
                     for (StudentCourse c : resp.body()) {
                         String name = c.getCourseName();
                         if (name == null) continue;
-                        if (name.contains("马克思") || name.contains("毛概") || name.contains("近代史")
-                                || name.contains("英语") || name.contains("心理") || name.contains("数学")
-                                || name.contains("体育")) {
-                            publics.add(name);
-                        } else { majors.add(name); }
+                        // 全部课程加入，不分类不限数量
+                        panelData.add(new String[]{name, ""});
                     }
-                    // 全部专业课本合并到 panelData，最多6门（留2个固定位）
-                    for (int i = 0; i < Math.min(majors.size(), 6); i++)
-                        panelData.add(new String[]{majors.get(i), String.valueOf(i)});
-                    // 剩余位置给公共课
-                    int remaining = 6 - panelData.size();
-                    for (int i = 0; i < Math.min(publics.size(), remaining); i++)
-                        panelData.add(new String[]{publics.get(i), String.valueOf(i)});
                 }
-                // 不再填充"学科综合"，直接加2个固定
-                while (panelData.size() > 6) panelData.remove(panelData.size() - 1);
+                // 追加2个固定入口
                 panelData.add(new String[]{"错题解析", ""});
                 panelData.add(new String[]{"复习加强", ""});
-                handler.post(() -> buildPanels(view));
+                handler.post(() -> buildPanels());
             }
             @Override public void onFailure(Call<List<StudentCourse>> call, Throwable t) {
                 if (!isAdded()) return;
-                String[][] def = {{"Java","0"},{"数据结构","1"},{"计算机网络","2"},
-                        {"数据库","3"},{"思政通识","4"},{"人文通识","5"},{"错题解析","6"},{"复习加强","7"}};
+                String[][] def = {{"Python程序设计",""},{"数据结构与算法基础",""},{"微信小程序设计",""},
+                        {"多媒体课件设计与开发",""},{"微课制作",""},{"高级网站技术",""},
+                        {"中国近现代史纲要",""},{"教师口语",""},{"教师书写技能",""},
+                        {"班主任工作技能训练",""},{"计算机综合实训",""},{"安全教育（六）",""},
+                        {"形势与政策",""},{"错题解析",""},{"复习加强",""}};
                 for (String[] d : def) panelData.add(d);
-                handler.post(() -> buildPanels(view));
+                handler.post(() -> buildPanels());
             }
         });
     }
 
-    private void buildPanels(View view) {
-        int[] ids = {R.id.quiz_panel_1,R.id.quiz_panel_2,R.id.quiz_panel_3,R.id.quiz_panel_4,
-                R.id.quiz_panel_5,R.id.quiz_panel_6,R.id.quiz_panel_7,R.id.quiz_panel_8};
-
-        // 计算正方形边长 = (屏幕宽 - 16dp*2边距 - 12dp间距) / 2
+    private void buildPanels() {
+        if (rvQuizPanels == null) return;
         int panelSize = (getResources().getDisplayMetrics().widthPixels - dp(44)) / 2;
 
-        for (int i = 0; i < ids.length; i++) {
-            FrameLayout frame = view.findViewById(ids[i]);
-            if (frame == null) continue;
-            // 设为正方形
-            ViewGroup.LayoutParams flp = frame.getLayoutParams();
-            flp.width = panelSize;
-            flp.height = panelSize;
-            frame.setLayoutParams(flp);
-            frame.removeAllViews();
-            if (i >= panelData.size()) continue;
-            String[] p = panelData.get(i);
-            final String name = p[0];
-            int coverRes = getCoverRes(name);
-
-            // 图片铺满容器，圆角
-            ImageView img = new ImageView(getContext());
-            img.setClipToOutline(true);
-            img.setOutlineProvider(new android.view.ViewOutlineProvider() {
-                @Override
-                public void getOutline(View v, android.graphics.Outline outline) {
-                    outline.setRoundRect(0, 0, v.getWidth(), v.getHeight(), dp(14));
-                }
-            });
-            FrameLayout.LayoutParams imgLp = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            img.setLayoutParams(imgLp);
-            img.setImageResource(coverRes);
-            img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-
-            // 半透明黑底 + 课程名底部叠加
-            TextView t = new TextView(getContext());
-            FrameLayout.LayoutParams tLp = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            tLp.gravity = Gravity.BOTTOM;
-            t.setLayoutParams(tLp);
-            t.setText(name);
-            t.setTextSize(13);
-            t.setTextColor(Color.WHITE);
-            t.setGravity(Gravity.CENTER);
-            t.setPadding(dp(6), dp(8), dp(6), dp(8));
-            t.setBackgroundColor(0x88000000);
-            t.setTypeface(Typeface.DEFAULT_BOLD);
-
-            frame.addView(img);
-            frame.addView(t);
-
-            if ("复习加强".equals(name)) {
-                frame.setOnClickListener(v -> Toast.makeText(getContext(), "复习加强模块开发中...", Toast.LENGTH_SHORT).show());
-            } else if ("错题解析".equals(name)) {
-                frame.setOnClickListener(v -> showWrongAnalysis());
-            } else {
-                frame.setOnClickListener(v -> showStartConfirm(name));
+        rvQuizPanels.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        rvQuizPanels.setAdapter(new RecyclerView.Adapter<PanelVH>() {
+            @NonNull @Override
+            public PanelVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                View v = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.item_quiz_panel, parent, false);
+                // 设置为正方形
+                GridLayoutManager.LayoutParams lp = new GridLayoutManager.LayoutParams(panelSize, panelSize);
+                lp.setMargins(0, 0, viewType == 0 ? dp(12) : 0, dp(12));
+                v.setLayoutParams(lp);
+                return new PanelVH(v);
             }
+            @Override public void onBindViewHolder(@NonNull PanelVH h, int pos) {
+                String name = panelData.get(pos)[0];
+                int cover = getCoverRes(name);
+                h.ivCover.setImageResource(cover);
+                h.ivCover.setClipToOutline(true);
+                h.ivCover.setOutlineProvider(new android.view.ViewOutlineProvider() {
+                    @Override public void getOutline(View v, android.graphics.Outline o) {
+                        o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), dp(14));
+                    }
+                });
+                h.tvName.setText(name);
+                h.itemView.setOnClickListener(v -> {
+                    if ("复习加强".equals(name)) {
+                        Toast.makeText(getContext(), "复习加强模块开发中...", Toast.LENGTH_SHORT).show();
+                    } else if ("错题解析".equals(name)) {
+                        showWrongAnalysis();
+                    } else {
+                        showStartConfirm(name);
+                    }
+                });
+            }
+            @Override public int getItemCount() { return panelData.size(); }
+            @Override public int getItemViewType(int pos) { return pos % 2; } // 0=左边(有margin), 1=右边(无margin)
+        });
+    }
+
+    static class PanelVH extends RecyclerView.ViewHolder {
+        ImageView ivCover; TextView tvName;
+        PanelVH(View v) { super(v);
+            ivCover = v.findViewById(R.id.iv_cover);
+            tvName = v.findViewById(R.id.tv_name);
         }
     }
 
