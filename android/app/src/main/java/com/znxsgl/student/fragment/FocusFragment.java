@@ -185,15 +185,16 @@ public class FocusFragment extends Fragment {
                             publics.add(name);
                         } else { majors.add(name); }
                     }
-                    for (int i = 0; i < Math.min(majors.size(), 4); i++)
+                    // 全部专业课本合并到 panelData，最多6门（留2个固定位）
+                    for (int i = 0; i < Math.min(majors.size(), 6); i++)
                         panelData.add(new String[]{majors.get(i), String.valueOf(i)});
-                    if (!publics.isEmpty()) {
-                        panelData.add(new String[]{"思政通识", "politics"});
-                        panelData.add(new String[]{"人文通识", "humanities"});
-                    }
+                    // 剩余位置给公共课
+                    int remaining = 6 - panelData.size();
+                    for (int i = 0; i < Math.min(publics.size(), remaining); i++)
+                        panelData.add(new String[]{publics.get(i), String.valueOf(i)});
                 }
-                // 补到6个以上，再加2个固定
-                while (panelData.size() < 6) panelData.add(new String[]{"学科综合", ""});
+                // 不再填充"学科综合"，直接加2个固定
+                while (panelData.size() > 6) panelData.remove(panelData.size() - 1);
                 panelData.add(new String[]{"错题解析", ""});
                 panelData.add(new String[]{"复习加强", ""});
                 handler.post(() -> buildPanels(view));
@@ -211,17 +212,33 @@ public class FocusFragment extends Fragment {
     private void buildPanels(View view) {
         int[] ids = {R.id.quiz_panel_1,R.id.quiz_panel_2,R.id.quiz_panel_3,R.id.quiz_panel_4,
                 R.id.quiz_panel_5,R.id.quiz_panel_6,R.id.quiz_panel_7,R.id.quiz_panel_8};
+
+        // 计算正方形边长 = (屏幕宽 - 16dp*2边距 - 12dp间距) / 2
+        int panelSize = (getResources().getDisplayMetrics().widthPixels - dp(44)) / 2;
+
         for (int i = 0; i < ids.length; i++) {
             FrameLayout frame = view.findViewById(ids[i]);
             if (frame == null) continue;
+            // 设为正方形
+            ViewGroup.LayoutParams flp = frame.getLayoutParams();
+            flp.width = panelSize;
+            flp.height = panelSize;
+            frame.setLayoutParams(flp);
             frame.removeAllViews();
             if (i >= panelData.size()) continue;
             String[] p = panelData.get(i);
             final String name = p[0];
             int coverRes = getCoverRes(name);
 
-            // 图片铺满容器
+            // 图片铺满容器，圆角
             ImageView img = new ImageView(getContext());
+            img.setClipToOutline(true);
+            img.setOutlineProvider(new android.view.ViewOutlineProvider() {
+                @Override
+                public void getOutline(View v, android.graphics.Outline outline) {
+                    outline.setRoundRect(0, 0, v.getWidth(), v.getHeight(), dp(14));
+                }
+            });
             FrameLayout.LayoutParams imgLp = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             img.setLayoutParams(imgLp);
