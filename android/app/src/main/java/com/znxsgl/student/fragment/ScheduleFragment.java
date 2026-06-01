@@ -166,7 +166,23 @@ public class ScheduleFragment extends Fragment {
                 return isSwiping;
             }
         });
+        // 课表界面：白色状态栏 + 深色图标
+        if (getActivity() != null && getActivity().getWindow() != null) {
+            getActivity().getWindow().setStatusBarColor(0xFFFFFFFF);
+            getActivity().getWindow().getDecorView().setSystemUiVisibility(
+                android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getActivity() != null && getActivity().getWindow() != null) {
+            getActivity().getWindow().setStatusBarColor(0xFFFFFFFF);
+            getActivity().getWindow().getDecorView().setSystemUiVisibility(
+                android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
     }
 
     // ========== 滑动切换动画 ==========
