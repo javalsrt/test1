@@ -3,6 +3,7 @@ package com.znxsgl.student.fragment;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -239,7 +240,7 @@ public class FocusFragment extends Fragment {
             t.setGravity(Gravity.CENTER);
             t.setPadding(dp(6), dp(8), dp(6), dp(8));
             t.setBackgroundColor(0x88000000);
-            t.setTypeface(null, android.graphics.Typeface.DEFAULT_BOLD);
+            t.setTypeface(Typeface.DEFAULT_BOLD);
 
             frame.addView(img);
             frame.addView(t);
