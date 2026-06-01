@@ -27,7 +27,10 @@ import com.znxsgl.student.model.ScheduleItem;
 import com.znxsgl.student.network.ApiService;
 import com.znxsgl.student.network.RetrofitClient;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,6 +49,7 @@ public class ScheduleFragment extends Fragment {
     private LinearLayout rowHeader;
 
     private int currentWeek = 13;
+    private int todayDayOfWeek = 1; // 1=周一 ... 7=周日
     private List<ScheduleItem> apiScheduleData = new ArrayList<>();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -96,10 +100,24 @@ public class ScheduleFragment extends Fragment {
         gridBody = view.findViewById(R.id.grid_body);
         rowHeader = view.findViewById(R.id.row_header);
 
-        tvDateInfo.setText(String.format(Locale.CHINA, "%d月%d日", 5, 24));
+        // 计算真实日期和周次
+        Calendar cal = Calendar.getInstance();
+        int year = cal.get(Calendar.YEAR);
+        int month = cal.get(Calendar.MONTH) + 1;
+        int day = cal.get(Calendar.DAY_OF_MONTH);
+        todayDayOfWeek = (cal.get(Calendar.DAY_OF_WEEK) + 6) % 7; // 周日=0, 周一=1...
+        if (todayDayOfWeek == 0) todayDayOfWeek = 7; // 周日=7
+        // 学期起始: 2026-02-16 (周一)
+        Calendar startCal = Calendar.getInstance();
+        startCal.set(2026, 2, 9); // 3月9日(学期第一周周一)
+        long diffMs = cal.getTimeInMillis() - startCal.getTimeInMillis();
+        int diffDays = (int) (diffMs / (1000 * 60 * 60 * 24));
+        currentWeek = Math.max(1, Math.min(18, (diffDays / 7) + 1));
+        
+        tvDateInfo.setText(String.format(Locale.CHINA, "%d月%d日", month, day));
 
         tvWeekLabel.setOnClickListener(v -> showWeekPicker());
-        btnToday.setOnClickListener(v -> { currentWeek = 13; refreshAll(); });
+        btnToday.setOnClickListener(v -> { currentWeek = getCurrentWeek(); fetchSchedule(currentWeek); });
 
         buildHeader();
         buildWeekSelector();
@@ -152,14 +170,61 @@ public class ScheduleFragment extends Fragment {
         });
     }
 
+    // ========== 计算当前周 ==========
+    private int getCurrentWeek() {
+        Calendar cal = Calendar.getInstance();
+        Calendar start = Calendar.getInstance();
+        start.set(2026, 2, 9); // 3月9日
+        long diff = cal.getTimeInMillis() - start.getTimeInMillis();
+        int days = (int) (diff / (1000 * 60 * 60 * 24));
+        return Math.max(1, Math.min(18, (days / 7) + 1));
+    }
+
     // ========== 表头 ==========
     private void buildHeader() {
         rowHeader.removeAllViews();
+        int todayIdx = todayDayOfWeek - 1; // 0索引
+        // 节次列
         TextView timeHeader = createHeaderCell("节次", 0xFF86868B, dp(36));
         timeHeader.setBackgroundColor(0xFFF5F5F7);
         rowHeader.addView(timeHeader);
-        for (String day : DAY_NAMES) {
-            rowHeader.addView(createHeaderCell(day, 0xFF1D1D1F, 0));
+        
+        // 周一到周日，带日期和高亮
+        Calendar cal = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("M/d", Locale.CHINA);
+        // 找到本周一的日期
+        int dow = cal.get(Calendar.DAY_OF_WEEK);
+        cal.add(Calendar.DAY_OF_MONTH, -(dow == 1 ? 6 : dow - 2)); // 移到周一
+        
+        for (int i = 0; i < 7; i++) {
+            String dateStr = sdf.format(cal.getTime());
+            String label = DAY_NAMES[i] + "\n" + dateStr;
+            boolean isToday = (i == todayIdx);
+            
+            LinearLayout cell = new LinearLayout(getContext());
+            cell.setLayoutParams(new LinearLayout.LayoutParams(0, dp(36), 1));
+            cell.setOrientation(LinearLayout.VERTICAL);
+            cell.setGravity(Gravity.CENTER);
+            cell.setBackgroundColor(isToday ? 0xFFE8F0FE : 0x00000000);
+            cell.setPadding(0, dp(2), 0, dp(2));
+            
+            TextView tvDay = new TextView(getContext());
+            tvDay.setText(DAY_NAMES[i]);
+            tvDay.setTextSize(11);
+            tvDay.setTextColor(isToday ? 0xFF5E6AD2 : 0xFF1D1D1F);
+            tvDay.setGravity(Gravity.CENTER);
+            tvDay.setTypeface(null, Typeface.BOLD);
+            cell.addView(tvDay);
+            
+            TextView tvDate = new TextView(getContext());
+            tvDate.setText(dateStr);
+            tvDate.setTextSize(8);
+            tvDate.setTextColor(isToday ? 0xFF5E6AD2 : 0xFF86868B);
+            tvDate.setGravity(Gravity.CENTER);
+            cell.addView(tvDate);
+            
+            rowHeader.addView(cell);
+            cal.add(Calendar.DAY_OF_MONTH, 1);
         }
     }
 
@@ -289,8 +354,13 @@ public class ScheduleFragment extends Fragment {
 
         if (courseName != null) {
             GradientDrawable bg = new GradientDrawable();
-            bg.setColor(COURSE_COLORS[Math.abs(courseName.hashCode()) % COURSE_COLORS.length]);
+            int baseColor = COURSE_COLORS[Math.abs(courseName.hashCode()) % COURSE_COLORS.length];
+            bg.setColor(baseColor);
             bg.setCornerRadius(dp(6));
+            // 今天课程加蓝色左边框
+            if (dayOfWeek == todayDayOfWeek) {
+                bg.setStroke(dp(3), 0xFF5E6AD2);
+            }
             cell.setBackground(bg);
 
             TextView tvName = new TextView(getContext());
@@ -310,7 +380,8 @@ public class ScheduleFragment extends Fragment {
             }
         } else {
             GradientDrawable bg = new GradientDrawable();
-            bg.setColor(0xFFFAFAFA); bg.setCornerRadius(dp(6));
+            int emptyBg = (dayOfWeek == todayDayOfWeek) ? 0xFFF5F7FF : 0xFFFAFAFA;
+            bg.setColor(emptyBg); bg.setCornerRadius(dp(6));
             cell.setBackground(bg);
         }
         return cell;

@@ -682,10 +682,10 @@
 
     // 计算当前教学周
     function getCurrentTeachWeek() {
-        const startDate = new Date(2026, 1, 16);
+        const startDate = new Date(2026, 2, 9); // 3月9日第一周周一
         const now = new Date();
         const diffDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
-        return Math.max(1, Math.min(18, Math.ceil(diffDays / 7)));
+        return Math.max(1, Math.min(18, Math.floor(diffDays / 7) + 1));
     }
 
     /** 打开排课弹窗（scheduled: true=已排课可修改，false=未排课） */
