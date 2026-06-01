@@ -219,26 +219,30 @@ public class FocusFragment extends Fragment {
             final String name = p[0];
             int coverRes = getCoverRes(name);
 
-            LinearLayout c = new LinearLayout(getContext());
-            c.setOrientation(LinearLayout.VERTICAL); c.setGravity(Gravity.CENTER);
-
-            // 课程插图
+            // 图片铺满容器
             ImageView img = new ImageView(getContext());
-            int imgSize = dp(60);
-            LinearLayout.LayoutParams imgLp = new LinearLayout.LayoutParams(imgSize, imgSize);
+            FrameLayout.LayoutParams imgLp = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             img.setLayoutParams(imgLp);
             img.setImageResource(coverRes);
             img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            c.addView(img);
 
-            // 课程名称
+            // 半透明黑底 + 课程名底部叠加
             TextView t = new TextView(getContext());
-            t.setText(name); t.setTextSize(11);
-            t.setTextColor(Color.parseColor("#1D1D1F")); t.setGravity(Gravity.CENTER);
-            t.setPadding(0, dp(4), 0, 0);
-            c.addView(t);
+            FrameLayout.LayoutParams tLp = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            tLp.gravity = Gravity.BOTTOM;
+            t.setLayoutParams(tLp);
+            t.setText(name);
+            t.setTextSize(13);
+            t.setTextColor(Color.WHITE);
+            t.setGravity(Gravity.CENTER);
+            t.setPadding(dp(6), dp(8), dp(6), dp(8));
+            t.setBackgroundColor(0x88000000);
+            t.setTypeface(null, android.graphics.Typeface.DEFAULT_BOLD);
 
-            frame.addView(c, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+            frame.addView(img);
+            frame.addView(t);
 
             if ("复习加强".equals(name)) {
                 frame.setOnClickListener(v -> Toast.makeText(getContext(), "复习加强模块开发中...", Toast.LENGTH_SHORT).show());

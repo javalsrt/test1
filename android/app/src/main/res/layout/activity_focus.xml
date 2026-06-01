@@ -32,7 +32,8 @@
         <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center"
             android:paddingHorizontal="12dp" android:paddingVertical="4dp"
-            android:background="@drawable/bg_tag">
+            android:background="@drawable/bg_tag"
+            android:visibility="gone">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="⏱ " android:textSize="16sp" />
             <TextView android:id="@+id/tv_timer_corner"
@@ -45,7 +46,8 @@
     <LinearLayout android:id="@+id/ll_info"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center"
-        android:paddingStart="52dp" android:paddingEnd="16dp" android:paddingBottom="10dp">
+        android:paddingStart="52dp" android:paddingEnd="16dp" android:paddingBottom="10dp"
+        android:visibility="gone">
         <TextView android:id="@+id/tv_today" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:text="今日专注 0 分钟"
             android:textSize="12sp" android:textColor="@color/ink_subtle" />
