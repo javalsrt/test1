@@ -21,12 +21,13 @@ public class TeacherStatsController {
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats(Authentication auth) {
         Long teacherUserId = (Long) auth.getPrincipal();
+        Long realTeacherId = getRealTeacherId(teacherUserId);
 
         // 1. 教师所教课程的班级ID
         List<Long> classIds = jdbc.queryForList(
             "SELECT DISTINCT cc.class_id FROM course_class cc " +
             "JOIN course c ON c.id = cc.course_id " +
-            "WHERE c.teacher_id = ?", Long.class, teacherUserId);
+            "WHERE c.teacher_id = ?", Long.class, realTeacherId);
 
         if (classIds.isEmpty()) {
             Map<String, Object> empty = new HashMap<>();
@@ -83,12 +84,51 @@ public class TeacherStatsController {
             "ORDER BY todaySeconds DESC LIMIT 20",
             params.toArray());
 
+        // 5. 刷题正确率
+        double quizAccuracy = 0;
+        try {
+            Double acc = jdbc.queryForObject(
+                "SELECT IFNULL(AVG(correct), 0) FROM (" +
+                " SELECT CASE WHEN user_answer = correct_answer THEN 100 ELSE 0 END AS correct" +
+                " FROM quiz_answer WHERE session_id IN (" +
+                "  SELECT id FROM quiz_session WHERE user_id IN (SELECT id FROM user WHERE class_id IN (" + placeholders + ") AND role = 1)" +
+                " )) t", Double.class, params.toArray());
+            quizAccuracy = acc != null ? acc : 0;
+        } catch(Exception ignored) {}
+
+        // 6. 各科目正确率
+        List<Map<String, Object>> subjectAccuracy = new ArrayList<>();
+        try {
+            subjectAccuracy = jdbc.queryForList(
+                "SELECT COALESCE(qa.subject, '其他') AS name," +
+                " ROUND(AVG(CASE WHEN qa.user_answer = qa.correct_answer THEN 100 ELSE 0 END), 1) AS accuracy," +
+                " COUNT(*) AS total" +
+                " FROM quiz_answer qa" +
+                " JOIN quiz_session qs ON qs.id = qa.session_id" +
+                " WHERE qs.user_id IN (SELECT id FROM user WHERE class_id IN (" + placeholders + ") AND role = 1)" +
+                " GROUP BY qa.subject ORDER BY total DESC",
+                params.toArray());
+        } catch(Exception ignored) {}
+
         Map<String, Object> result = new HashMap<>();
         result.put("totalStudents", totalStudents);
         result.put("onlineToday", onlineToday);
         result.put("avgFocusMinutes", avgFocusMinutes);
+        result.put("quizAccuracy", Math.round(quizAccuracy));
+        result.put("subjectAccuracy", subjectAccuracy);
         result.put("students", students);
         return ResponseEntity.ok(result);
+    }
+
+    private Long getRealTeacherId(Long userId) {
+        try {
+            Map<String, Object> u = jdbc.queryForMap("SELECT real_name FROM user WHERE id = ?", userId);
+            String realName = (String) u.get("real_name");
+            return jdbc.queryForObject(
+                "SELECT id FROM teacher WHERE real_name = ? LIMIT 1", Long.class, realName);
+        } catch (Exception e) {
+            return userId;
+        }
     }
 
     /** 班级统计（学习统计页面） */
@@ -196,13 +236,13 @@ public class TeacherStatsController {
     @GetMapping("/trend")
     public ResponseEntity<List<Map<String, Object>>> getTrend(Authentication auth) {
         Long teacherUserId = (Long) auth.getPrincipal();
+        Long realTeacherId = getRealTeacherId(teacherUserId);
 
-        // 学生ID列表
         List<Long> userIds = jdbc.queryForList(
             "SELECT DISTINCT u.id FROM user u " +
             "JOIN course_class cc ON cc.class_id = u.class_id " +
             "JOIN course c ON c.id = cc.course_id " +
-            "WHERE c.teacher_id = ? AND u.role = 1", Long.class, teacherUserId);
+            "WHERE c.teacher_id = ? AND u.role = 1", Long.class, realTeacherId);
 
         if (userIds.isEmpty()) return ResponseEntity.ok(Collections.emptyList());
 
