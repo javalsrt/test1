@@ -311,10 +311,12 @@ public class ProfileFragment extends Fragment {
 
     private void loadCourses() {
         String token = prefs.getString("token", "");
+        Toast.makeText(getContext(), "正在加载课程... token=" + (token.isEmpty() ? "空!" : "OK"), Toast.LENGTH_SHORT).show();
         ApiService api = RetrofitClient.getInstance().create(ApiService.class);
         api.getStudentCourses("Bearer " + token).enqueue(new Callback<List<StudentCourse>>() {
             @Override
             public void onResponse(Call<List<StudentCourse>> call, Response<List<StudentCourse>> resp) {
+                Toast.makeText(getContext(), "课程API返回: code=" + resp.code() + " 数量=" + (resp.body() != null ? resp.body().size() : 0), Toast.LENGTH_SHORT).show();
                 List<StudentCourse> items = (resp.isSuccessful() && resp.body() != null)
                         ? resp.body() : new ArrayList<>();
                 mainHandler.post(() -> {
@@ -327,7 +329,7 @@ public class ProfileFragment extends Fragment {
             @Override
             public void onFailure(Call<List<StudentCourse>> call, Throwable t) {
                 mainHandler.post(() ->
-                    Toast.makeText(getContext(), "无法连接服务器", Toast.LENGTH_SHORT).show());
+                    Toast.makeText(getContext(), "加载失败: " + t.getMessage(), Toast.LENGTH_LONG).show());
             }
         });
     }

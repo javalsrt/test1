@@ -21,10 +21,10 @@ import java.util.concurrent.TimeUnit;
 public class RetrofitClient {
 
     // 自动判断：本地10.0.2.2:8080开发用模拟器地址，部署时改为服务器地址你好
-    // 模拟器默认地址，真机测试改为 8.166.118.19
-    public static String getBaseUrl() {
-        return "http://10.0.2.2:8080";
-    }
+// 模拟器用 10.0.2.2，真机用电脑IP (192.168.0.146)
+public static String getBaseUrl() {
+    return "http://192.168.0.146:8080";
+}
 
     private static Retrofit instance;
     private static Context appContext;
