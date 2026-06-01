@@ -52,20 +52,37 @@ public class ScheduleFragment extends Fragment {
 
     // ========== 常量 ==========
     private static final String[] DAY_NAMES = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
-    private static final int[] SLOT_WEIGHTS = {2, 2, 1, 2, 2, 3};
+    private static final int[] SLOT_WEIGHTS = {2, 2, 1, 2, 2, 2, 1};
 
     private static final String[][] SLOTS = {
-        {"第一大节", "8:30", "9:55"},
-        {"第二大节", "10:10", "11:35"},
-        {"第三大节", "11:40", "12:20"},
-        {"第四大节", "14:20", "15:45"},
-        {"第五大节", "16:00", "17:25"},
-        {"第六大节", "19:10", "21:30"},
+        {"第一大节", "08:30", "09:55"},   // (01,02小节)
+        {"第二大节", "10:10", "11:35"},   // (03,04小节)
+        {"第三大节", "11:40", "12:20"},   // (05小节)
+        {"第四大节", "14:20", "15:45"},   // (06,07小节)
+        {"第五大节", "16:00", "17:25"},   // (08,09小节)
+        {"第六大节", "19:10", "20:40"},   // (10,11,12小节)
+        {"第七大节", "20:50", "21:30"},   // (13小节)
+    };
+
+    private static final int[] COURSE_COLORS = {
+        0xFFE8F0FE, // 浅蓝
+        0xFFE8F8ED, // 浅绿
+        0xFFFFF3E0, // 浅橙
+        0xFFF3E8FF, // 浅紫
+        0xFFFCE4EC, // 浅粉
+        0xFFE0F7FA, // 浅青
+        0xFFF9F0E0, // 浅黄
+        0xFFEDE7F6, // 淡紫
+        0xFFE8EAF6, // 靛蓝
+        0xFFFBE9E7, // 淡红
+        0xFFE0F2F1, // 浅墨绿
+        0xFFFFF8E1, // 奶油黄
     };
 
     private static final int[] SLOT_COLORS = {
         0xFFE8F0FE, 0xFFE8F8ED, 0xFFFFF3E0,
         0xFFF3E8FF, 0xFFFCE4EC, 0xFFE0F7FA,
+        0xFFF5F5F7,
     };
 
     @Nullable @Override
@@ -186,16 +203,24 @@ public class ScheduleFragment extends Fragment {
     private void buildScheduleGrid() {
         gridBody.removeAllViews();
 
-        // 上午
+        // 上午 (slot 0-2)
         for (int s = 0; s < 3; s++) {
             gridBody.addView(buildSlotRow(s));
             gridBody.addView(createHairline());
         }
         // 午休分隔
-        gridBody.addView(buildBreakRow());
+        gridBody.addView(buildBreakRow(" 午餐·午休 12:20 — 14:15 "));
         gridBody.addView(createHairline());
-        // 下午+晚
-        for (int s = 3; s < 6; s++) {
+        // 下午 (slot 3-4)
+        for (int s = 3; s < 5; s++) {
+            gridBody.addView(buildSlotRow(s));
+            gridBody.addView(createHairline());
+        }
+        // 晚餐分隔
+        gridBody.addView(buildBreakRow(" 晚餐·晚休 17:25 — 19:10 "));
+        gridBody.addView(createHairline());
+        // 晚上 (slot 5-6)
+        for (int s = 5; s < 7; s++) {
             gridBody.addView(buildSlotRow(s));
             gridBody.addView(createHairline());
         }
@@ -264,7 +289,7 @@ public class ScheduleFragment extends Fragment {
 
         if (courseName != null) {
             GradientDrawable bg = new GradientDrawable();
-            bg.setColor(SLOT_COLORS[slotIndex % SLOT_COLORS.length]);
+            bg.setColor(COURSE_COLORS[Math.abs(courseName.hashCode()) % COURSE_COLORS.length]);
             bg.setCornerRadius(dp(6));
             cell.setBackground(bg);
 
@@ -291,7 +316,7 @@ public class ScheduleFragment extends Fragment {
         return cell;
     }
 
-    private LinearLayout buildBreakRow() {
+    private LinearLayout buildBreakRow(String text) {
         LinearLayout row = new LinearLayout(getContext());
         row.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(26)));
@@ -314,7 +339,7 @@ public class ScheduleFragment extends Fragment {
         sep.addView(lineL);
 
         TextView tv = new TextView(getContext());
-        tv.setText(" 午餐·午休 12:20 — 14:15 ");
+        tv.setText(text);
         tv.setTextSize(10); tv.setTextColor(0xFFFF9500); tv.setGravity(Gravity.CENTER);
         sep.addView(tv);
 

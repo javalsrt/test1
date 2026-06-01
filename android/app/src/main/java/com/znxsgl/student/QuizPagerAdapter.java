@@ -79,7 +79,8 @@ public class QuizPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
                 tv.setPadding(20, 18, 20, 18);
                 GradientDrawable bg = new GradientDrawable();
                 bg.setCornerRadius(14);
-                bg.setColor(selected ? Color.parseColor("#0A84FF") : Color.parseColor("#F5F5F7"));
+                bg.setColor(selected ? Color.parseColor("#5E6AD2") : Color.WHITE);
+                bg.setStroke(1, Color.parseColor("#E5E5EA"));
                 tv.setBackground(bg);
                 tv.setTextColor(selected ? Color.WHITE : Color.parseColor("#1D1D1F"));
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -135,8 +136,9 @@ public class QuizPagerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
 
     private GradientDrawable getJudgeBg(boolean selected) {
         GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(16);
-        bg.setColor(selected ? Color.parseColor("#E5E5EA") : Color.parseColor("#F5F5F7"));
+        bg.setCornerRadius(12);
+        bg.setColor(selected ? Color.parseColor("#EEEEF2") : Color.WHITE);
+        bg.setStroke(1, Color.parseColor("#E5E5EA"));
         return bg;
     }
 

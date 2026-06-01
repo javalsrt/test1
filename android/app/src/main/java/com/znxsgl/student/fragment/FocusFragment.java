@@ -447,14 +447,14 @@ public class FocusFragment extends Fragment {
             btn.setText(name + " (" + subjCounts[i] + ")");
             btn.setTextSize(13);
             btn.setPadding(16, 8, 16, 8);
-            btn.setTextColor(Color.parseColor(i == 0 ? "#FFFFFF" : "#1D1D1F"));
-            btn.setBackgroundColor(Color.parseColor(i == 0 ? "#0A84FF" : "#F5F5F7"));
+            btn.setTextColor(Color.parseColor(i == 0 ? "#FFFFFF" : "#6E6E73"));
+            btn.setBackgroundColor(Color.parseColor(i == 0 ? "#5E6AD2" : "#F9F9FB"));
             final int si = i;
             btn.setOnClickListener(v -> {
                 for (int j = 0; j < llSubjects.getChildCount(); j++) {
                     TextView child = (TextView) llSubjects.getChildAt(j);
-                    child.setTextColor(Color.parseColor(j == si ? "#FFFFFF" : "#1D1D1F"));
-                    child.setBackgroundColor(Color.parseColor(j == si ? "#0A84FF" : "#F5F5F7"));
+                    child.setTextColor(Color.parseColor(j == si ? "#FFFFFF" : "#6E6E73"));
+                    child.setBackgroundColor(Color.parseColor(j == si ? "#5E6AD2" : "#F9F9FB"));
                 }
                 vpQuestions.setCurrentItem(subjStarts[si], false);
             });
@@ -495,8 +495,8 @@ public class FocusFragment extends Fragment {
                     lastSubj[0] = si;
                     for (int j = 0; j < llSubjects.getChildCount(); j++) {
                         TextView child = (TextView) llSubjects.getChildAt(j);
-                        child.setTextColor(Color.parseColor(j == si ? "#FFFFFF" : "#1D1D1F"));
-                        child.setBackgroundColor(Color.parseColor(j == si ? "#0A84FF" : "#F5F5F7"));
+                    child.setTextColor(Color.parseColor(j == si ? "#FFFFFF" : "#6E6E73"));
+                    child.setBackgroundColor(Color.parseColor(j == si ? "#5E6AD2" : "#F9F9FB"));
                     }
                 }
                 // 刷新按钮状态
@@ -607,11 +607,11 @@ public class FocusFragment extends Fragment {
         } else {
             btnU.setText("✓ 明白了");
             btnU.setTextColor(Color.parseColor("#8E8E93"));
-            btnU.setBackgroundColor(Color.parseColor("#F5F5F7"));
+            btnU.setBackgroundColor(Color.TRANSPARENT);
         }
         if (bookmarkIdx.contains(pos)) {
             btnB.setText("★ 已收藏");
-            btnB.setTextColor(Color.parseColor("#0A84FF"));
+            btnB.setTextColor(Color.parseColor("#5E6AD2"));
         } else {
             btnB.setText("☆ 收藏");
             btnB.setTextColor(Color.parseColor("#1D1D1F"));
@@ -677,7 +677,7 @@ public class FocusFragment extends Fragment {
     private android.graphics.drawable.GradientDrawable getTagBg() {
         android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
         bg.setCornerRadius(8);
-        bg.setColor(Color.parseColor("#E5F3FF"));
+        bg.setColor(Color.parseColor("#F2F2F7"));
         return bg;
     }
 

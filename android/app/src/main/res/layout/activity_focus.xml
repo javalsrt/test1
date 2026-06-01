@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
+    android:background="@color/canvas"
     android:orientation="vertical">
 
     <!-- 顶部栏 -->
@@ -18,14 +18,14 @@
 
         <TextView android:id="@+id/btn_back"
             android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="‹" android:textSize="28sp" android:textColor="#0A84FF"
+            android:text="‹" android:textSize="28sp" android:textColor="@color/primary"
             android:padding="8dp" android:clickable="true" android:focusable="true" />
 
         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
             android:layout_weight="1" android:gravity="center">
             <TextView android:id="@+id/tv_title"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="专注刷题" android:textSize="17sp" android:textColor="#1D1D1F"
+                android:text="专注刷题" android:textSize="17sp" android:textColor="@color/ink"
                 android:fontFamily="sans-serif-medium" />
         </LinearLayout>
 
@@ -37,7 +37,7 @@
                 android:text="⏱ " android:textSize="16sp" />
             <TextView android:id="@+id/tv_timer_corner"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="00:00" android:textSize="16sp" android:textColor="#0A84FF"
+                android:text="00:00" android:textSize="16sp" android:textColor="@color/primary"
                 android:fontFamily="sans-serif-medium" />
         </LinearLayout>
     </LinearLayout>
@@ -48,66 +48,66 @@
         android:paddingStart="52dp" android:paddingEnd="16dp" android:paddingBottom="10dp">
         <TextView android:id="@+id/tv_today" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:text="今日专注 0 分钟"
-            android:textSize="12sp" android:textColor="#86868B" />
+            android:textSize="12sp" android:textColor="@color/ink_subtle" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text=" · " android:textSize="12sp" android:textColor="#C7C7CC" />
+            android:text=" · " android:textSize="12sp" android:textColor="@color/ink_tertiary" />
         <TextView android:id="@+id/tv_last" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:text="上次 0 分钟"
-            android:textSize="12sp" android:textColor="#86868B" />
+            android:textSize="12sp" android:textColor="@color/ink_subtle" />
     </LinearLayout>
 
-    <View android:layout_width="match_parent" android:layout_height="0.5dp"
-        android:background="#E5E7EB" />
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:background="@color/hairline" />
 
     <!-- 切换容器 -->
     <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
 
-        <!-- 8面板 4行2列 -->
+        <!-- 8面板网格 -->
         <ScrollView android:layout_width="match_parent" android:layout_height="match_parent"
             android:fillViewport="true">
         <LinearLayout android:id="@+id/ll_panels"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="12dp" android:paddingTop="8dp" android:paddingBottom="16dp">
+            android:paddingHorizontal="16dp" android:paddingTop="16dp" android:paddingBottom="24dp">
 
             <!-- 第1行 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
-                android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="12dp">
                 <FrameLayout android:id="@+id/quiz_panel_1" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="8dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="12dp"
                     android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
                 <FrameLayout android:id="@+id/quiz_panel_2" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="8dp"
+                    android:layout_height="match_parent" android:layout_weight="1"
                     android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
             </LinearLayout>
             <!-- 第2行 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
-                android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="12dp">
                 <FrameLayout android:id="@+id/quiz_panel_3" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="8dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="12dp"
                     android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
                 <FrameLayout android:id="@+id/quiz_panel_4" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="8dp"
+                    android:layout_height="match_parent" android:layout_weight="1"
                     android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
             </LinearLayout>
             <!-- 第3行 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
-                android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="12dp">
                 <FrameLayout android:id="@+id/quiz_panel_5" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="8dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="12dp"
                     android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
                 <FrameLayout android:id="@+id/quiz_panel_6" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="8dp"
+                    android:layout_height="match_parent" android:layout_weight="1"
                     android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
             </LinearLayout>
             <!-- 第4行 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
-                android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="4dp">
+                android:layout_weight="1" android:orientation="horizontal">
                 <FrameLayout android:id="@+id/quiz_panel_7" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="8dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="12dp"
                     android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
                 <FrameLayout android:id="@+id/quiz_panel_8" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="8dp"
+                    android:layout_height="match_parent" android:layout_weight="1"
                     android:background="@drawable/bg_card_entry" android:clickable="true" android:focusable="true" />
             </LinearLayout>
         </LinearLayout>
@@ -116,18 +116,20 @@
         <!-- 答题区 -->
         <LinearLayout android:id="@+id/ll_quiz_area"
             android:layout_width="match_parent" android:layout_height="match_parent"
-            android:orientation="vertical" android:visibility="gone">
+            android:orientation="vertical" android:visibility="gone"
+            android:background="@color/canvas">
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/viewpager_quiz"
                 android:layout_width="match_parent" android:layout_height="0dp"
                 android:layout_weight="1" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="horizontal" android:gravity="center"
-                android:padding="16dp" android:background="#F5F5F7">
+                android:padding="16dp" android:background="@color/canvas">
                 <TextView android:id="@+id/btn_quiz_done"
                     android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
-                    android:text="长按提交" android:textSize="15sp" android:textColor="#FFFFFF"
+                    android:text="长按提交" android:textSize="14sp" android:textColor="@color/on_primary"
                     android:gravity="center" android:background="@drawable/bg_btn_primary"
+                    android:fontFamily="sans-serif-medium"
                     android:clickable="true" android:focusable="true" android:longClickable="true" />
             </LinearLayout>
         </LinearLayout>

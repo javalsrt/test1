@@ -158,6 +158,7 @@
             <li class="nav-item" data-page="courses"><span class="nav-icon">📋</span>课程管理</li>
             <li class="nav-item" data-page="students"><span class="nav-icon">👥</span>学生列表</li>
             <li class="nav-item" data-page="stats"><span class="nav-icon">📈</span>学习统计</li>
+            <li class="nav-item" data-page="manage"><span class="nav-icon">🏫</span>班级管理</li>
             <li class="nav-item"><span class="nav-icon">⚙️</span>系统设置</li>
         </ul>
         <div class="sidebar-footer">
@@ -202,7 +203,8 @@
     document.getElementById('sAvatar').textContent = userName.charAt(0);
 
     // 自动判断：本地开发用 localhost，部署到服务器走 Nginx 代理
-    const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+        || location.hostname === '' || location.protocol === 'file:')
         ? 'http://localhost:8080' : '';
 
     // ===== 全局 fetch 拦截：401 时踢出登录 =====
@@ -240,10 +242,12 @@
             document.querySelector('.page-sub').textContent =
                 page === 'dashboard' ? '欢迎回来' :
                 page === 'courses' ? '查看所教课程与班级' :
-                page === 'stats' ? '班级图谱 · 个人图谱' : '';
+                page === 'stats' ? '班级图谱 · 个人图谱' :
+                page === 'manage' ? '创建班级 · 导入课表 · 导入学生' : '';
             if (page === 'dashboard') loadDashboard();
             else if (page === 'courses') loadCourses();
             else if (page === 'stats') loadStats();
+            else if (page === 'manage') loadManage();
             else document.getElementById('pageContent').innerHTML =
                 `<div style="text-align:center;padding:80px 0;color:#86868B;">功能开发中...</div>`;
         });
@@ -714,17 +718,20 @@
                         const key = s.day_of_week + '-' + s.start_node;
                         if (seen[key]) return; // 去重
                         seen[key] = true;
-                        let weekNum = curWeek;
+                        // 解析weeks数组，为每个周生成一个slot记录
+                        let weekList = [curWeek];
                         try {
                             const w = JSON.parse(s.weeks || '[]');
-                            if (w.length > 0) weekNum = w[0];
+                            if (w.length > 0) weekList = w;
                         } catch(e) {}
-                        selectedSlots.push({
-                            week: weekNum, dayOfWeek: s.day_of_week, startNode: s.start_node,
-                            startTime: s.start_time, endTime: s.end_time,
-                            credit: s.step || 2, step: s.step || 2,
-                            classroom: s.classroom || '', semester: s.semester || '2025-2026-2',
-                            weeks: s.weeks || '[' + weekNum + ']'
+                        weekList.forEach(wn => {
+                            selectedSlots.push({
+                                week: wn, dayOfWeek: s.day_of_week, startNode: s.start_node,
+                                startTime: s.start_time, endTime: s.end_time,
+                                credit: s.step || 2, step: s.step || 2,
+                                classroom: s.classroom || '', semester: s.semester || '2025-2026-2',
+                                weeks: s.weeks || ('[' + wn + ']')
+                            });
                         });
                     });
                 usedCredit = selectedSlots.reduce((sum, s) => sum + (s.credit || 2), 0);
@@ -798,13 +805,15 @@
         const curWeek = getCurrentTeachWeek();
         const usedCredit = selected.reduce((sum, s) => sum + (s.credit || 2), 0);
 
+        // 大节模式（匹配官方课表）：第1大节=01,02小节，第2大节=03,04小节...
         const periods = [
-            { node: 1, start: '08:30', end: '09:55' },
-            { node: 2, start: '10:10', end: '11:35' },
-            { node: 3, start: '11:40', end: '12:20' },
-            { node: 4, start: '14:20', end: '15:45' },
-            { node: 5, start: '16:00', end: '17:25' },
-            { node: 6, start: '19:10', end: '21:30' }
+            { name: '第1大节', nodes: [1, 2], label: '(01,02小节)', start: '08:30', end: '09:55' },
+            { name: '第2大节', nodes: [3, 4], label: '(03,04小节)', start: '10:10', end: '11:35' },
+            { name: '第3大节', nodes: [5], label: '(05小节)', start: '11:40', end: '12:20' },
+            { name: '第4大节', nodes: [6, 7], label: '(06,07小节)', start: '14:20', end: '15:45' },
+            { name: '第5大节', nodes: [8, 9], label: '(08,09小节)', start: '16:00', end: '17:25' },
+            { name: '第6大节', nodes: [10, 11, 12], label: '(10,11,12小节)', start: '19:10', end: '20:40' },
+            { name: '第7大节', nodes: [13], label: '(13小节)', start: '20:50', end: '21:30' }
         ];
         const days = ['周一','周二','周三','周四','周五','周六','周日'];
 
@@ -813,14 +822,17 @@
         // 周选择器（从当前周开始）
         html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap;">';
         html += '<span style="font-size:13px;color:#86868B;margin-right:6px;">选择周次：</span>';
-        for (let w = curWeek; w <= 18; w++) {
+        for (let w = 1; w <= 18; w++) {
             const isActive = w === week;
+            const isCurrent = w === curWeek;
             const hasSelected = selected.some(s => s.week === w);
-            const bg = isActive ? '#0A84FF' : (hasSelected ? '#E8F8ED' : '#F5F5F7');
-            const tc = isActive ? '#fff' : (hasSelected ? '#34C759' : '#86868B');
+            // 当前周=蓝色, 选中周=深蓝, 有数据=绿色, 空=灰色
+            const bg = isActive ? '#5E6AD2' : (isCurrent ? '#E8F0FF' : (hasSelected ? '#E8F8ED' : '#F5F5F7'));
+            const tc = isActive ? '#fff' : (isCurrent ? '#5E6AD2' : (hasSelected ? '#34C759' : '#86868B'));
+            const border = isCurrent && !isActive ? 'border:2px solid #5E6AD2;' : '';
             html += '<span style="display:inline-flex;align-items:center;justify-content:center;'
                 + 'width:34px;height:34px;border-radius:50%;font-size:12px;cursor:pointer;transition:all 0.15s;'
-                + 'background:' + bg + ';color:' + tc + ';font-weight:' + (isActive||hasSelected?'600':'400') + ';" '
+                + border + 'background:' + bg + ';color:' + tc + ';font-weight:' + (isActive||isCurrent?'600':'400') + ';" '
                 + 'onclick="loadPlannerWeek(' + w + ')">' + w + '</span>';
         }
         html += '</div>';
@@ -849,88 +861,94 @@
 
         const occupiedMap = {}, occupiedInfo = {}, ownCourseMap = {};
         existing.forEach(c => {
-            const k = c.day_of_week + '-' + c.start_node;
-            // 判断是否为本门课程（记录对应周次）
-            if (c.course_name === state.courseName) {
-                let w = 1;
-                try { const arr = JSON.parse(c.weeks || '[1]'); if (arr.length > 0) w = arr[0]; } catch(e) {}
-                ownCourseMap[k] = { week: w };
-            } else {
-                occupiedMap[k] = true;
-                occupiedInfo[k] = c;
+            // Expand: a course at start_node=N with step=S covers nodes N through N+S-1
+            const step = c.step || 2;
+            for (let n = c.start_node; n < c.start_node + step; n++) {
+                const k = c.day_of_week + '-' + n;
+                if (c.course_name === state.courseName) {
+                    let w = 1;
+                    try { const arr = JSON.parse(c.weeks || '[1]'); if (arr.length > 0) w = arr[0]; } catch(e) {}
+                    ownCourseMap[k] = { week: w, course: c };
+                } else {
+                    occupiedMap[k] = true;
+                    occupiedInfo[k] = c;
+                }
             }
         });
 
-        for (let p = 0; p < periods.length; p++) {
-            const period = periods[p];
+        for (let pi = 0; pi < periods.length; pi++) {
+            const p = periods[pi];
             html += '<tr>';
-            html += '<td style="padding:6px 4px;font-size:11px;color:#86868B;text-align:center;background:#F5F5F7;border-bottom:1px solid #E5E7EB;">'
-                + period.start + '<br/>' + period.end + '</td>';
+            
+            // 节次标签列
+            const timeLabel = p.label ? `${p.start}<br/>${p.end}<br/><span style="font-size:9px;color:#A0A0A0;">${p.label}</span>` : p.start + '<br/>' + p.end;
+            html += '<td style="padding:4px;font-size:11px;color:#86868B;text-align:center;background:#F5F5F7;border-bottom:1px solid #E5E7EB;vertical-align:middle;">' + timeLabel + '</td>';
 
             for (let d = 0; d < 7; d++) {
                 const day = d + 1;
-                const key = day + '-' + period.node;
-                const isOccupied = occupiedMap[key];
-                const occInfo = occupiedInfo[key];
-                const ownInfo = ownCourseMap[key];
-                const isOwnCourse = !!ownInfo;
-
+                
+                // Check all child nodes of this 大节
+                let cellCourseName = '', cellRoom = '', cellIsOwn = false, cellIsOther = false, cellIsSelected = false;
+                let cellSlotKey = '';
+                
+                for (const node of p.nodes) {
+                    const key = day + '-' + node;
+                    if (ownCourseMap[key]) { cellIsOwn = true; cellSlotKey = key; break; }
+                    if (occupiedMap[key]) { cellIsOther = true; cellCourseName = occupiedInfo[key].course_name; cellRoom = occupiedInfo[key].classroom || ''; break; }
+                }
+                
+                // Check if selected
+                for (const node of p.nodes) {
+                    if (selected.find(s => s.week === week && s.dayOfWeek === day && s.startNode === node)) {
+                        cellIsSelected = true; break;
+                    }
+                }
+                
                 let cellStyle, cellContent, onclick;
-
-                // 检查当前周是否已选中
-                const sel2 = selected.find(s => s.week === week && s.dayOfWeek === day && s.startNode === period.node && s.credit !== 1);
-                const sel1 = selected.find(s => s.week === week && s.dayOfWeek === day && s.startNode === period.node && s.credit === 1);
-                // 检查本门课程在其他周是否有选中（从 selectedSlots 中查找，不限当前周）
-                const otherWeekSlot = !sel2 && !sel1 && isOwnCourse
-                    ? selected.find(s => s.dayOfWeek === day && s.startNode === period.node) : null;
-
-                if (sel2) {
-                    // 当前周已选中（2课时）— 绿色，可点击取消
-                    cellStyle = 'background:#34C759;border:2px solid #28A745;border-radius:4px;cursor:pointer;';
-                    cellContent = '<div style="font-size:11px;color:#fff;font-weight:600;text-align:center;">✓ 第' + week + '周<br/>2课时</div>';
-                    onclick = 'onclick="removeSlotByKey(' + day + ',' + period.node + ',' + week + ')"';
-                } else if (sel1) {
-                    // 当前周已选中（1课时）— 橙色，可点击取消
-                    cellStyle = 'background:#FF9500;border:2px solid #E68600;border-radius:4px;cursor:pointer;';
-                    cellContent = '<div style="font-size:11px;color:#fff;font-weight:600;text-align:center;">✓ 第' + sel1.subNode + '节</div>';
-                    onclick = 'onclick="removeSlotByKey(' + day + ',' + period.node + ',' + week + ')"';
-                } else if (otherWeekSlot) {
-                    // 本门课程在其他周已排 — 灰色高亮，可点击取消
-                    cellStyle = 'background:#E5E7EB;border:2px solid #C7C7CC;border-radius:4px;cursor:pointer;';
-                    cellContent = '<div style="font-size:10px;color:#86868B;font-weight:600;text-align:center;">✓ 第' + otherWeekSlot.week + '周<br/>' + (otherWeekSlot.credit||2) + '课时</div>';
-                    onclick = 'onclick="removeSlotByKey(' + day + ',' + period.node + ',' + otherWeekSlot.week + ')"';
-                } else if (isOwnCourse) {
-                    // 本门课程已排（从 existingCourses 获取周次信息）
-                    const ownWeek = ownInfo.week;
-                    const slotInSelected = selected.find(s => s.dayOfWeek === day && s.startNode === period.node);
-                    const slotWeek = slotInSelected ? slotInSelected.week : ownWeek;
-                    cellStyle = 'background:#E5E7EB;border:2px solid #C7C7CC;border-radius:4px;cursor:pointer;';
-                    cellContent = '<div style="font-size:10px;color:#86868B;font-weight:600;text-align:center;">本课程<br/>第' + slotWeek + '周</div>';
-                    onclick = 'onclick="removeSlotByKey(' + day + ',' + period.node + ',' + slotWeek + ')"';
-                } else if (isOccupied) {
-                    // 其他课程占用 — 浅紫色，不可操作
-                    cellStyle = 'background:#F0F4FF;border:1px solid #D8E4FF;border-radius:4px;';
-                    cellContent = '<div style="font-size:10px;color:#3A6BD5;font-weight:500;text-align:center;">'
-                        + (occInfo.course_name.length > 8 ? occInfo.course_name.substring(0,8)+'...' : occInfo.course_name)
-                        + '<br/><span style="color:#7BA4E0;">已占用</span></div>';
+                
+                if (cellIsSelected) {
+                    const selSlot = selected.find(s => s.week === week && s.dayOfWeek === day && p.nodes.includes(s.startNode));
+                    const sn = selSlot ? selSlot.startNode : p.nodes[0];
+                    cellStyle = 'background:#34C759;border:2px solid #28A745;border-radius:6px;cursor:pointer;';
+                    cellContent = `<div style="font-size:12px;color:#fff;font-weight:600;text-align:center;line-height:1.4;">${state.courseName}</div>`;
+                    onclick = 'onclick="removeSlotByKey(' + day + ',' + sn + ',' + week + ')"';
+                } else if (cellIsOwn) {
+                    const ownSlot = selected.find(s => s.dayOfWeek === day && p.nodes.includes(s.startNode));
+                    const ownWk = ownSlot ? ownSlot.week : 1;
+                    const ownSn = ownSlot ? ownSlot.startNode : p.nodes[0];
+                    cellStyle = 'background:#E5E7EB;border:2px solid #C7C7CC;border-radius:6px;cursor:pointer;';
+                    cellContent = `<div style="font-size:10px;color:#86868B;font-weight:600;text-align:center;">本课程<br/>第${ownWk}周</div>`;
+                    onclick = 'onclick="removeSlotByKey(' + day + ',' + ownSn + ',' + ownWk + ')"';
+                } else if (cellIsOther) {
+                    cellStyle = 'background:#F0F4FF;border:1px solid #D8E4FF;border-radius:6px;';
+                    const shortName = cellCourseName.length > 8 ? cellCourseName.substring(0,8)+'...' : cellCourseName;
+                    const shortRoom = cellRoom ? (cellRoom.length > 10 ? cellRoom.substring(0,10)+'...' : cellRoom) : '';
+                    cellContent = `<div style="font-size:10px;color:#3A6BD5;font-weight:500;text-align:center;line-height:1.3;">
+                        ${shortName}<br/><span style="font-size:9px;color:#7BA4E0;">${shortRoom}</span></div>`;
                     onclick = '';
                 } else {
-                    // 空位：可点击
-                    cellStyle = 'background:#FAFAFA;border:2px dashed #D1D1D6;border-radius:4px;cursor:pointer;transition:all 0.15s;';
+                    cellStyle = 'background:#FAFAFA;border:2px dashed #D1D1D6;border-radius:6px;cursor:pointer;transition:all 0.15s;';
                     cellContent = '<div style="font-size:10px;color:#C7C7CC;text-align:center;">空</div>';
-                    onclick = 'onclick="toggleSlot(' + day + ',' + period.node + ',\'' + period.start + '\',\'' + period.end + '\',' + week + ')" '
-                        + 'onmouseover="this.style.background=\'#E8F8ED\';this.style.borderColor=\'#34C759\'" '
-                        + 'onmouseout="this.style.background=\'#FAFAFA\';this.style.borderColor=\'#D1D1D6\'"';
+                    onclick = 'onclick="toggleSlot(' + day + ',' + p.nodes[0] + ',\'' + p.start + '\',\'' + p.end + '\',' + week + ')"'
+                        + ' onmouseover="this.firstChild.style.background=\'#E8F8ED\';this.firstChild.style.borderColor=\'#34C759\'"'
+                        + ' onmouseout="this.firstChild.style.background=\'#FAFAFA\';this.firstChild.style.borderColor=\'#D1D1D6\'"';
                 }
 
-                html += '<td style="padding:3px;height:52px;border-bottom:1px solid #E5E7EB;" ' + onclick + '>'
+                html += '<td style="padding:3px;height:62px;border-bottom:1px solid #E5E7EB;" ' + onclick + '>'
                     + '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;' + cellStyle + '">'
                     + cellContent + '</div></td>';
             }
             html += '</tr>';
-            if (period.node === 3) {
+            
+            // 午休分隔线
+            if (pi === 2) {
                 html += '<tr><td colspan="8" style="padding:4px;text-align:center;font-size:10px;color:#FF9500;background:#FFF8F0;">'
                     + '——— 午休 12:20 - 14:20 ———</td></tr>';
+            }
+            // 晚餐分隔线
+            if (pi === 4) {
+                html += '<tr><td colspan="8" style="padding:4px;text-align:center;font-size:10px;color:#FF9500;background:#FFF8F0;">'
+                    + '——— 晚休 17:25 - 19:10 ———</td></tr>';
             }
         }
         html += '</tbody></table>';
@@ -1349,8 +1367,9 @@
             html += '<div id="studentCharts" style="display:none;">';
             html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
             html += '<div class="card"><div class="card-title">📈 7天专注趋势</div><div class="chart-box" style="height:280px;"><canvas id="chartStuTrend"></canvas></div></div>';
-            html += '<div class="card"><div class="card-title">🍩 课程提问占比</div><div class="chart-box" style="height:280px;"><canvas id="chartStuQ"></canvas></div></div>';
+            html += '<div class="card"><div class="card-title">🎯 六维能力雷达图</div><div class="chart-box" style="height:280px;"><canvas id="chartStuRadar"></canvas></div></div>';
             html += '</div>';
+            html += '<div class="card" style="margin-top:16px;"><div class="card-title">🍩 课程提问占比</div><div class="chart-box" style="height:240px;"><canvas id="chartStuQ"></canvas></div></div>';
             html += '<div id="stuSummary" class="card" style="margin-top:16px;padding:20px 24px;"></div>';
             html += '</div>';
 
@@ -1406,10 +1425,13 @@
                 }
             }));
 
-            // 给排行表里每个学生加点击事件
+            // 给排行表里每个学生加点击事件（先清除旧的）
+            const oldList = document.getElementById('studentPickList');
+            if (oldList) oldList.remove();
+
             const studentList = document.getElementById('classCharts');
             if (studentList && data.focusRank) {
-                let listHtml = '<div class="card" style="margin-top:16px;padding:16px 20px;"><div class="card-title">👤 点击学生名查看个人图谱</div>';
+                let listHtml = '<div id="studentPickList" class="card" style="margin-top:16px;padding:16px 20px;"><div class="card-title">👤 点击学生名查看个人图谱</div>';
                 listHtml += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">';
                 (data.focusRank || []).forEach(s => {
                     listHtml += `<span style="cursor:pointer;padding:6px 14px;background:#F5F5F7;border-radius:20px;font-size:13px;" 
@@ -1467,6 +1489,9 @@
                     scales: { y: { beginAtZero: true, ticks: { color: '#86868B', callback: v => v+'min' } }, x: { ticks: { color: '#86868B' } } } }
             }));
 
+            // 六边形雷达图
+            drawStudentRadar(data.scores || []);
+
             // 提问占比
             const qNames = (data.questions || []).map(r => r.name);
             const qCounts = (data.questions || []).map(r => r.count);
@@ -1479,6 +1504,261 @@
             document.getElementById('studentCharts').scrollIntoView({ behavior: 'smooth' });
 
         } catch (e) { console.error(e); }
+    }
+
+    /** 绘制六边形雷达图 (Canvas) */
+    function drawStudentRadar(scores) {
+        const canvas = document.getElementById('chartStuRadar');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        // 适配DPR
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const W = rect.width * dpr;
+        const H = Math.min(280, W) * dpr;
+        canvas.width = W;
+        canvas.height = H;
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = Math.min(280, W) + 'px';
+
+        const padding = 40 * dpr; // 边距，防止标签被截断
+        const cx = W / 2, cy = H / 2;
+        const maxVal = 10; // 满分10
+        const minR = 30 * dpr;  // 最小半径
+        const maxR = (Math.min(W, H) - padding * 2) / 2; // 最大半径，预留边距
+
+        if (!scores || scores.length === 0) {
+            ctx.fillStyle = '#8E8E93';
+            ctx.font = `${14*dpr}px -apple-system, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('暂无测评数据', cx, cy);
+            return;
+        }
+
+        const n = scores.length; // 6 维
+        const angleStep = (Math.PI * 2) / n;
+
+        // 计算六边形顶点
+        function getXY(i, val) {
+            const angle = -Math.PI / 2 + i * angleStep; // 从顶部开始
+            const r = minR + (val / maxVal) * (maxR - minR);
+            return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+        }
+
+        // 绘制背景网格（5层同心六边形）
+        for (let level = 0; level <= 4; level++) {
+            ctx.beginPath();
+            const proportion = (level + 1) / 5;
+            for (let i = 0; i < n; i++) {
+                const angle = -Math.PI / 2 + i * angleStep;
+                const r = minR + proportion * (maxR - minR);
+                const x = cx + r * Math.cos(angle);
+                const y = cy + r * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = level === 4 ? '#D1D1D6' : '#E5E5EA';
+            ctx.lineWidth = level === 4 ? 1.5 * dpr : 0.8 * dpr;
+            ctx.stroke();
+        }
+
+        // 绘制轴线
+        for (let i = 0; i < n; i++) {
+            const angle = -Math.PI / 2 + i * angleStep;
+            const x = cx + maxR * Math.cos(angle);
+            const y = cy + maxR * Math.sin(angle);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(x, y);
+            ctx.strokeStyle = '#E5E5EA';
+            ctx.lineWidth = 0.5 * dpr;
+            ctx.stroke();
+        }
+
+        // 绘制数据区域（半透明填充）
+        ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+            const val = scores[i].value || 0;
+            const { x, y } = getXY(i, val);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(94, 106, 210, 0.15)';
+        ctx.fill();
+        ctx.strokeStyle = '#5E6AD2';
+        ctx.lineWidth = 2 * dpr;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        // 绘制数据点
+        for (let i = 0; i < n; i++) {
+            const val = scores[i].value || 0;
+            const { x, y } = getXY(i, val);
+            ctx.beginPath();
+            ctx.arc(x, y, 4 * dpr, 0, Math.PI * 2);
+            ctx.fillStyle = '#5E6AD2';
+            ctx.fill();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1.5 * dpr;
+            ctx.stroke();
+        }
+
+        // 绘制标签 + 分数（顶部/底部自适应偏移防止截断）
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i < n; i++) {
+            const val = scores[i].value || 0;
+            const angle = -Math.PI / 2 + i * angleStep;
+            const labelR = maxR + 20 * dpr;
+            const lx = cx + labelR * Math.cos(angle);
+            const ly = cy + labelR * Math.sin(angle);
+
+            // 根据角度调整文本偏移：顶部标签下移，底部标签上移
+            const nameOffY = angle < -Math.PI / 2 ? 10 * dpr : (angle > Math.PI / 2 ? -10 * dpr : -7 * dpr);
+            const valOffY = angle < -Math.PI / 2 ? 26 * dpr : (angle > Math.PI / 2 ? 6 * dpr : 9 * dpr);
+
+            const name = formatScoreName(scores[i].name || '');
+            ctx.font = `500 ${11*dpr}px -apple-system, "PingFang SC", sans-serif`;
+            ctx.fillStyle = '#1D1D1F';
+            ctx.fillText(name, lx, ly + nameOffY);
+
+            ctx.font = `600 ${13*dpr}px -apple-system, "PingFang SC", sans-serif`;
+            ctx.fillStyle = '#5E6AD2';
+            ctx.fillText(val + '', lx, ly + valOffY);
+        }
+    }
+
+    /** 缩短标签名：『逻辑思维力』→「逻辑」 */
+    function formatScoreName(raw) {
+        const map = {
+            '逻辑思维力': '逻辑', '判断决策力': '判断', '专注耐力': '专注',
+            '专业学习力': '专业', '信息检索力': '检索', '自律执行力': '自律'
+        };
+        return map[raw] || raw.substring(0, 2);
+    }
+
+    // ===== 班级管理 =====
+    let manageClassId = null;
+    let manageClassName = '';
+
+    async function loadManage() {
+        const content = document.getElementById('pageContent');
+        content.innerHTML = '<div style="text-align:center;padding:60px;color:#86868B;">加载中...</div>';
+
+        try {
+            const res = await fetch(API + '/api/teacher/class/list', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const classes = res.ok ? (await res.json()) : [];
+
+            let html = '';
+
+            if (classes.length > 0) {
+                html += '<div class="card" style="margin-bottom:20px;"><div class="card-title">📋 现有班级</div><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">';
+                classes.forEach(c => {
+                    const name = (c.className||'').replace(/'/g,'&apos;');
+                    html += '<div style="padding:10px 16px;background:#F5F5F7;border-radius:10px;cursor:pointer;font-size:13px;" onclick="selectManageClass('+c.id+',\''+name+'\')"><strong>'+c.className+'</strong> · '+(c.grade||'')+'级 · '+(c.major||'')+'<br><span style="color:#86868B;">'+(c.studentCount||0)+' 名学生</span></div>';
+                });
+                html += '</div></div>';
+            }
+
+            html += '<div class="card" style="margin-bottom:20px;"><div class="card-title">🆕 创建新班级</div>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">';
+            html += '<div><label style="font-size:12px;color:#86868B;">班级名称 *</label><br><input id="mgClassName" style="width:100%;padding:8px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;" placeholder="例: 2023级计算机1班"></div>';
+            html += '<div><label style="font-size:12px;color:#86868B;">年级</label><br><input id="mgGrade" style="width:100%;padding:8px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;" value="2023" placeholder="2023"></div>';
+            html += '<div><label style="font-size:12px;color:#86868B;">专业</label><br><input id="mgMajor" style="width:100%;padding:8px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;" value="计算机科学与技术" placeholder="计算机科学与技术"></div>';
+            html += '<div><label style="font-size:12px;color:#86868B;">院系</label><br><input id="mgDept" style="width:100%;padding:8px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;" value="计算机与信息工程学院" placeholder="计算机与信息工程学院"></div>';
+            html += '</div>';
+            html += '<button onclick="doCreateClass()" style="margin-top:14px;padding:10px 24px;background:#5E6AD2;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">确认创建</button>';
+            html += '<span id="mgCreateMsg" style="margin-left:12px;font-size:13px;color:#34C759;"></span></div>';
+
+            html += '<div id="mgImportArea" style="display:none;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
+            html += '<div class="card"><div class="card-title">📅 导入课表</div><p style="font-size:12px;color:#86868B;margin-bottom:8px;"><b>步骤：</b>①右键→查看源代码 ②Ctrl+F搜<code>tablecs</code> ③从<code>&lt;table ... id=&quot;tablecs&quot;&gt;</code>复制到<code>&lt;/table&gt;</code></p><textarea id="mgScheduleHtml" rows="6" style="width:100%;padding:8px;border:1px solid #E5E7EB;border-radius:8px;font-size:12px;font-family:monospace;" placeholder="从 &lt;table id=&quot;tablecs&quot;&gt; 开始粘贴...（不是script标签里的JS代码！）"></textarea><br><span style="font-size:11px;color:#C7C7CC;">粘贴后若内容很大可能卡顿1-2秒，正常</span><br><button onclick="doImportSchedule()" style="margin-top:8px;padding:8px 20px;background:#5E6AD2;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;">解析导入</button><span id="mgSchedulePreview" style="margin-left:8px;font-size:11px;color:#86868B;"></span><br><span id="mgScheduleMsg" style="font-size:12px;color:#34C759;"></span></div>';
+
+    // 监听 textarea 输入，即时检测是否正确内容
+    setTimeout(() => {
+        const ta = document.getElementById('mgScheduleHtml');
+        const preview = document.getElementById('mgSchedulePreview');
+        if (ta && preview) {
+            ta.addEventListener('input', function() {
+                const v = this.value.trim();
+                if (!v) { preview.textContent = ''; return; }
+                const isTable = /^\s*<table[^>]*tablecs/i.test(v);
+                preview.textContent = isTable
+                    ? ` 检测到课表(${v.length}字)`
+                    : ' 无效！请粘贴以 <table id="tablecs"> 开头的HTML（非日志文本）';
+                preview.style.color = isTable ? '#34C759' : '#FF3B30';
+            });
+        }
+    }, 200);
+            html += '<div class="card"><div class="card-title">👥 导入学生名单</div><p style="font-size:12px;color:#86868B;margin-bottom:8px;">每行一个学生：<b>学号</b> Tab键 <b>姓名</b><br>默认密码: 123456</p><textarea id="mgStudentList" rows="6" style="width:100%;padding:8px;border:1px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:monospace;" placeholder="2515100120&#9;张三&#10;2515100121&#9;李四&#10;2515100122&#9;王五"></textarea><button onclick="doImportStudents()" style="margin-top:8px;padding:8px 20px;background:#5E6AD2;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;">批量导入</button><span id="mgStudentMsg" style="margin-left:8px;font-size:12px;color:#34C759;"></span></div>';
+            html += '</div></div>';
+
+            content.innerHTML = html;
+        } catch (e) {
+            content.innerHTML = '<div style="text-align:center;padding:60px;color:#FF3B30;">无法连接后端服务器</div>';
+        }
+    }
+
+    function selectManageClass(id, name) {
+        manageClassId = id; manageClassName = name;
+        document.getElementById('mgImportArea').style.display = 'block';
+        setTimeout(() => document.getElementById('mgImportArea').scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+
+    async function doCreateClass() {
+        const cn = document.getElementById('mgClassName').value.trim();
+        if (!cn) { alert('请输入班级名称'); return; }
+        const body = { className: cn, grade: document.getElementById('mgGrade').value.trim(), major: document.getElementById('mgMajor').value.trim(), department: document.getElementById('mgDept').value.trim() };
+        try {
+            const res = await fetch(API + '/api/teacher/class/create', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(body) });
+            const data = await res.json();
+            const msgEl = document.getElementById('mgCreateMsg');
+            if (data.classId) {
+                manageClassId = data.classId; manageClassName = data.className;
+                msgEl.textContent = ' 创建成功！可在下方导入课表和学生';
+                msgEl.style.color = '#34C759';
+                document.getElementById('mgImportArea').style.display = 'block';
+                setTimeout(() => document.getElementById('mgImportArea').scrollIntoView({ behavior: 'smooth' }), 100);
+            } else {
+                msgEl.textContent = ' 创建失败: ' + (data.error||'');
+                msgEl.style.color = '#FF3B30';
+            }
+        } catch (e) { const msgEl = document.getElementById('mgCreateMsg'); msgEl.textContent = ' 网络错误'; msgEl.style.color = '#FF3B30'; }
+    }
+
+    async function doImportSchedule() {
+        if (!manageClassId) { alert('请先创建或选择一个班级'); return; }
+        const html = document.getElementById('mgScheduleHtml').value.trim();
+        if (!html) { alert('请粘贴课表HTML'); return; }
+        if (!/<table/i.test(html)) { alert('内容不以<table开头！请确认复制了正确的课表HTML，不是日志或其他文字。'); return; }
+        const msgEl = document.getElementById('mgScheduleMsg');
+        msgEl.textContent = ' 解析中...'; msgEl.style.color = '#86868B';
+        try {
+            const res = await fetch(API + '/api/teacher/class/import-schedule', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ classId: manageClassId, html: html }) });
+            const data = await res.json();
+            msgEl.textContent = ' ' + (data.msg || '导入完成');
+            msgEl.style.color = '#34C759';
+        } catch (e) { msgEl.textContent = ' 网络错误'; msgEl.style.color = '#FF3B30'; }
+    }
+
+    async function doImportStudents() {
+        if (!manageClassId) { alert('请先创建或选择一个班级'); return; }
+        const students = document.getElementById('mgStudentList').value.trim();
+        if (!students) { alert('请粘贴学生名单'); return; }
+        const msgEl = document.getElementById('mgStudentMsg');
+        msgEl.textContent = ' 导入中...'; msgEl.style.color = '#86868B';
+        try {
+            const res = await fetch(API + '/api/teacher/class/import-students', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ classId: manageClassId, students: students }) });
+            const data = await res.json();
+            const added = data.created || 0;
+            const msg = added > 0 ? '成功添加 '+added+' 名学生' : ('出错: '+(data.errors||[]).join(', '));
+            msgEl.textContent = ' ' + msg;
+            msgEl.style.color = added > 0 ? '#34C759' : '#FF3B30';
+        } catch (e) { msgEl.textContent = ' 网络错误'; msgEl.style.color = '#FF3B30'; }
     }
 </script>
 </body>

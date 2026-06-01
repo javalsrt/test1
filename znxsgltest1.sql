@@ -11,7 +11,7 @@
  Target Server Version : 80028 (8.0.28)
  File Encoding         : 65001
 
- Date: 31/05/2026 23:01:35
+ Date: 01/06/2026 16:24:45
 */
 
 SET NAMES utf8mb4;
@@ -232,7 +232,7 @@ CREATE TABLE `class_info`  (
   `grade` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '年级',
   `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '班级信息表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '班级信息表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of class_info
@@ -261,14 +261,13 @@ CREATE TABLE `course`  (
   INDEX `dept_id`(`dept_id` ASC) USING BTREE,
   CONSTRAINT `course_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `teacher` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
   CONSTRAINT `course_ibfk_2` FOREIGN KEY (`dept_id`) REFERENCES `department` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 43 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of course
 -- ----------------------------
 INSERT INTO `course` VALUES (1, '数据结构与算法基础', 'CS101', 3, 1, '2025-2026-2', '必修', 4.0, '线性表、树、图、排序算法', '2026-05-24 21:00:49');
 INSERT INTO `course` VALUES (2, 'Python程序设计', 'CS102', 4, 1, '2025-2026-2', '必修', 3.0, 'Python基础语法与数据分析', '2026-05-24 21:00:49');
-INSERT INTO `course` VALUES (3, '微信小程序设计', 'CS103', 2, 1, '2025-2026-2', '必修', 3.0, 'WXML/WXSS/JS开发', '2026-05-24 21:00:49');
 INSERT INTO `course` VALUES (4, '高级网站技术', 'CS104', 5, 1, '2025-2026-2', '限选', 3.0, '前端框架与后端API', '2026-05-24 21:00:49');
 INSERT INTO `course` VALUES (5, '多媒体课件设计与开发', 'CS105', 1, 1, '2025-2026-2', '限选', 2.0, '课件制作工具与设计', '2026-05-24 21:00:49');
 INSERT INTO `course` VALUES (6, '计算机综合实训', 'CS106', 6, 1, '2025-2026-2', '必修', 4.0, '综合项目开发实践', '2026-05-24 21:00:49');
@@ -281,6 +280,15 @@ INSERT INTO `course` VALUES (12, '中国近现代史纲要', 'PUB101', 7, 3, '20
 INSERT INTO `course` VALUES (13, '形势与政策', 'PUB102', 7, 3, '2025-2026-2', '必修', 1.0, '时事政策教育', '2026-05-24 21:00:49');
 INSERT INTO `course` VALUES (14, '安全教育(六)', 'PUB103', 7, 3, '2025-2026-2', '必修', 1.0, '校园安全教育', '2026-05-24 21:00:49');
 INSERT INTO `course` VALUES (24, 'Java基础设计', NULL, 1, NULL, '2025-2026-2', '必修', 2.0, NULL, '2026-05-28 16:44:42');
+INSERT INTO `course` VALUES (34, '微信小程序设计', NULL, 1, NULL, '2025-2026-2', '必修', 4.0, NULL, '2026-06-01 16:08:07');
+INSERT INTO `course` VALUES (35, '数据结构与算法基础', NULL, 1, NULL, '2025-2026-2', '必修', 4.0, NULL, '2026-06-01 16:08:07');
+INSERT INTO `course` VALUES (36, '教师书写技能', NULL, 1, NULL, '2025-2026-2', '必修', 4.0, NULL, '2026-06-01 16:08:07');
+INSERT INTO `course` VALUES (37, '微课制作', NULL, 1, NULL, '2025-2026-2', '必修', 4.0, NULL, '2026-06-01 16:08:07');
+INSERT INTO `course` VALUES (38, 'Python程序设计', NULL, 1, NULL, '2025-2026-2', '必修', 4.0, NULL, '2026-06-01 16:08:07');
+INSERT INTO `course` VALUES (39, '教师口语', NULL, 1, NULL, '2025-2026-2', '必修', 4.0, NULL, '2026-06-01 16:08:07');
+INSERT INTO `course` VALUES (40, '中国近现代史纲要', NULL, 1, NULL, '2025-2026-2', '必修', 4.0, NULL, '2026-06-01 16:08:07');
+INSERT INTO `course` VALUES (41, '教师资格考试实务', NULL, 1, NULL, '2025-2026-2', '必修', 4.0, NULL, '2026-06-01 16:08:07');
+INSERT INTO `course` VALUES (42, '高级网站技术', NULL, 1, NULL, '2025-2026-2', '必修', 4.0, NULL, '2026-06-01 16:08:07');
 
 -- ----------------------------
 -- Table structure for course_class
@@ -296,7 +304,7 @@ CREATE TABLE `course_class`  (
   INDEX `class_id`(`class_id` ASC) USING BTREE,
   CONSTRAINT `course_class_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `course` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `course_class_ibfk_2` FOREIGN KEY (`class_id`) REFERENCES `class_info` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 31 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程-班级关联表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 86 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程-班级关联表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of course_class
@@ -305,8 +313,6 @@ INSERT INTO `course_class` VALUES (1, 1, 1, '2025-2026-2');
 INSERT INTO `course_class` VALUES (8, 1, 2, '2025-2026-2');
 INSERT INTO `course_class` VALUES (2, 2, 1, '2025-2026-2');
 INSERT INTO `course_class` VALUES (9, 2, 2, '2025-2026-2');
-INSERT INTO `course_class` VALUES (3, 3, 1, '2025-2026-2');
-INSERT INTO `course_class` VALUES (10, 3, 2, '2025-2026-2');
 INSERT INTO `course_class` VALUES (4, 4, 1, '2025-2026-2');
 INSERT INTO `course_class` VALUES (11, 4, 2, '2025-2026-2');
 INSERT INTO `course_class` VALUES (5, 5, 1, '2025-2026-2');
@@ -323,6 +329,15 @@ INSERT INTO `course_class` VALUES (20, 13, 2, '2025-2026-2');
 INSERT INTO `course_class` VALUES (21, 14, 2, '2025-2026-2');
 INSERT INTO `course_class` VALUES (29, 24, 1, '2025-2026-2');
 INSERT INTO `course_class` VALUES (30, 24, 2, '2025-2026-2');
+INSERT INTO `course_class` VALUES (50, 34, 2, '2025-2026-2');
+INSERT INTO `course_class` VALUES (51, 35, 2, '2025-2026-2');
+INSERT INTO `course_class` VALUES (52, 36, 2, '2025-2026-2');
+INSERT INTO `course_class` VALUES (53, 37, 2, '2025-2026-2');
+INSERT INTO `course_class` VALUES (54, 38, 2, '2025-2026-2');
+INSERT INTO `course_class` VALUES (55, 39, 2, '2025-2026-2');
+INSERT INTO `course_class` VALUES (56, 40, 2, '2025-2026-2');
+INSERT INTO `course_class` VALUES (57, 41, 2, '2025-2026-2');
+INSERT INTO `course_class` VALUES (58, 42, 2, '2025-2026-2');
 
 -- ----------------------------
 -- Table structure for department
@@ -442,7 +457,7 @@ CREATE TABLE `focus_session`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user`(`user_id` ASC) USING BTREE,
   CONSTRAINT `focus_session_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 60 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 61 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of focus_session
@@ -506,6 +521,7 @@ INSERT INTO `focus_session` VALUES (56, 14, 103, '2026-05-31 13:52:24', '2026-05
 INSERT INTO `focus_session` VALUES (57, 14, 17, '2026-05-31 13:54:48', '2026-05-31 13:55:05', '2026-05-31 21:55:05');
 INSERT INTO `focus_session` VALUES (58, 14, 57, '2026-05-31 14:11:50', '2026-05-31 14:12:49', '2026-05-31 22:12:50');
 INSERT INTO `focus_session` VALUES (59, 14, 43, '2026-05-31 14:22:05', '2026-05-31 14:22:49', '2026-05-31 22:22:50');
+INSERT INTO `focus_session` VALUES (60, 14, 80, '2026-05-31 16:29:42', '2026-05-31 16:31:03', '2026-06-01 00:31:03');
 
 -- ----------------------------
 -- Table structure for learning_goal
@@ -959,7 +975,7 @@ CREATE TABLE `schedule`  (
   INDEX `course_id`(`course_id` ASC) USING BTREE,
   CONSTRAINT `schedule_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `schedule_ibfk_2` FOREIGN KEY (`course_id`) REFERENCES `course` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 731 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课表/排课表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 923 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课表/排课表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of schedule
@@ -1160,6 +1176,70 @@ INSERT INTO `schedule` VALUES (727, 10, 5, '多媒体课件设计与开发', 7, 
 INSERT INTO `schedule` VALUES (728, 11, 5, '多媒体课件设计与开发', 7, '14:20:00', '15:45:00', 4, 2, '', '2025-2026-2', '[15]', 1, '2026-05-30 22:58:55');
 INSERT INTO `schedule` VALUES (729, 12, 5, '多媒体课件设计与开发', 7, '14:20:00', '15:45:00', 4, 2, '', '2025-2026-2', '[15]', 1, '2026-05-30 22:58:55');
 INSERT INTO `schedule` VALUES (730, 13, 5, '多媒体课件设计与开发', 7, '14:20:00', '15:45:00', 4, 2, '', '2025-2026-2', '[15]', 1, '2026-05-30 22:58:55');
+INSERT INTO `schedule` VALUES (859, 14, 34, '微信小程序设计', 2, '08:20:00', '10:10:00', 1, 2, '地信-B402（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (860, 15, 34, '微信小程序设计', 2, '08:20:00', '10:10:00', 1, 2, '地信-B402（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (861, 16, 34, '微信小程序设计', 2, '08:20:00', '10:10:00', 1, 2, '地信-B402（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (862, 17, 34, '微信小程序设计', 2, '08:20:00', '10:10:00', 1, 2, '地信-B402（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (863, 14, 35, '数据结构与算法基础', 3, '08:20:00', '10:10:00', 1, 2, '地信-B403（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (864, 15, 35, '数据结构与算法基础', 3, '08:20:00', '10:10:00', 1, 2, '地信-B403（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (865, 16, 35, '数据结构与算法基础', 3, '08:20:00', '10:10:00', 1, 2, '地信-B403（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (866, 17, 35, '数据结构与算法基础', 3, '08:20:00', '10:10:00', 1, 2, '地信-B403（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (867, 14, 36, '教师书写技能', 4, '08:20:00', '10:10:00', 1, 2, '武2-108', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (868, 15, 36, '教师书写技能', 4, '08:20:00', '10:10:00', 1, 2, '武2-108', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (869, 16, 36, '教师书写技能', 4, '08:20:00', '10:10:00', 1, 2, '武2-108', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (870, 17, 36, '教师书写技能', 4, '08:20:00', '10:10:00', 1, 2, '武2-108', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (871, 14, 37, '微课制作', 5, '08:20:00', '10:10:00', 1, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (872, 15, 37, '微课制作', 5, '08:20:00', '10:10:00', 1, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (873, 16, 37, '微课制作', 5, '08:20:00', '10:10:00', 1, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (874, 17, 37, '微课制作', 5, '08:20:00', '10:10:00', 1, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (875, 14, 5, '多媒体课件设计与开发', 1, '10:10:00', '14:30:00', 3, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (876, 15, 5, '多媒体课件设计与开发', 1, '10:10:00', '14:30:00', 3, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (877, 16, 5, '多媒体课件设计与开发', 1, '10:10:00', '14:30:00', 3, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (878, 17, 5, '多媒体课件设计与开发', 1, '10:10:00', '14:30:00', 3, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (879, 14, 34, '微信小程序设计', 2, '10:10:00', '14:30:00', 3, 2, '地信-B402（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (880, 15, 34, '微信小程序设计', 2, '10:10:00', '14:30:00', 3, 2, '地信-B402（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (881, 16, 34, '微信小程序设计', 2, '10:10:00', '14:30:00', 3, 2, '地信-B402（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (882, 17, 34, '微信小程序设计', 2, '10:10:00', '14:30:00', 3, 2, '地信-B402（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (883, 14, 35, '数据结构与算法基础', 3, '10:10:00', '14:30:00', 3, 2, '地信-B403（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (884, 15, 35, '数据结构与算法基础', 3, '10:10:00', '14:30:00', 3, 2, '地信-B403（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (885, 16, 35, '数据结构与算法基础', 3, '10:10:00', '14:30:00', 3, 2, '地信-B403（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (886, 17, 35, '数据结构与算法基础', 3, '10:10:00', '14:30:00', 3, 2, '地信-B403（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (887, 14, 36, '教师书写技能', 4, '10:10:00', '14:30:00', 3, 2, '智慧板书实训室（地信-A103)', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (888, 15, 36, '教师书写技能', 4, '10:10:00', '14:30:00', 3, 2, '智慧板书实训室（地信-A103)', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (889, 16, 36, '教师书写技能', 4, '10:10:00', '14:30:00', 3, 2, '智慧板书实训室（地信-A103)', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (890, 17, 36, '教师书写技能', 4, '10:10:00', '14:30:00', 3, 2, '智慧板书实训室（地信-A103)', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (891, 14, 37, '微课制作', 5, '10:10:00', '14:30:00', 3, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (892, 15, 37, '微课制作', 5, '10:10:00', '14:30:00', 3, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (893, 16, 37, '微课制作', 5, '10:10:00', '14:30:00', 3, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (894, 17, 37, '微课制作', 5, '10:10:00', '14:30:00', 3, 2, '实验3-301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (895, 14, 38, 'Python程序设计', 1, '15:20:00', '16:20:00', 6, 2, '武1-316（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (896, 15, 38, 'Python程序设计', 1, '15:20:00', '16:20:00', 6, 2, '武1-316（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (897, 16, 38, 'Python程序设计', 1, '15:20:00', '16:20:00', 6, 2, '武1-316（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (898, 17, 38, 'Python程序设计', 1, '15:20:00', '16:20:00', 6, 2, '武1-316（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (899, 14, 39, '教师口语', 2, '15:20:00', '16:20:00', 6, 2, '武1-114', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (900, 15, 39, '教师口语', 2, '15:20:00', '16:20:00', 6, 2, '武1-114', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (901, 16, 39, '教师口语', 2, '15:20:00', '16:20:00', 6, 2, '武1-114', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (902, 17, 39, '教师口语', 2, '15:20:00', '16:20:00', 6, 2, '武1-114', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (903, 14, 40, '中国近现代史纲要', 3, '15:20:00', '16:20:00', 6, 2, '实验2-A402', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (904, 15, 40, '中国近现代史纲要', 3, '15:20:00', '16:20:00', 6, 2, '实验2-A402', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (905, 16, 40, '中国近现代史纲要', 3, '15:20:00', '16:20:00', 6, 2, '实验2-A402', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (906, 17, 40, '中国近现代史纲要', 3, '15:20:00', '16:20:00', 6, 2, '实验2-A402', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (907, 14, 41, '教师资格考试实务', 4, '15:20:00', '16:20:00', 6, 2, '武1-214', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (908, 15, 41, '教师资格考试实务', 4, '15:20:00', '16:20:00', 6, 2, '武1-214', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (909, 16, 41, '教师资格考试实务', 4, '15:20:00', '16:20:00', 6, 2, '武1-214', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (910, 17, 41, '教师资格考试实务', 4, '15:20:00', '16:20:00', 6, 2, '武1-214', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (911, 14, 42, '高级网站技术', 5, '15:20:00', '16:20:00', 6, 2, '地信-B301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (912, 15, 42, '高级网站技术', 5, '15:20:00', '16:20:00', 6, 2, '地信-B301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (913, 16, 42, '高级网站技术', 5, '15:20:00', '16:20:00', 6, 2, '地信-B301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (914, 17, 42, '高级网站技术', 5, '15:20:00', '16:20:00', 6, 2, '地信-B301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (915, 14, 38, 'Python程序设计', 1, '16:20:00', '19:00:00', 8, 2, '武1-316（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (916, 15, 38, 'Python程序设计', 1, '16:20:00', '19:00:00', 8, 2, '武1-316（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (917, 16, 38, 'Python程序设计', 1, '16:20:00', '19:00:00', 8, 2, '武1-316（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (918, 17, 38, 'Python程序设计', 1, '16:20:00', '19:00:00', 8, 2, '武1-316（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (919, 14, 42, '高级网站技术', 5, '16:20:00', '19:00:00', 8, 2, '地信-B301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (920, 15, 42, '高级网站技术', 5, '16:20:00', '19:00:00', 8, 2, '地信-B301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (921, 16, 42, '高级网站技术', 5, '16:20:00', '19:00:00', 8, 2, '地信-B301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
+INSERT INTO `schedule` VALUES (922, 17, 42, '高级网站技术', 5, '16:20:00', '19:00:00', 8, 2, '地信-B301（机房）', '2025-2026-2', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]', 1, '2026-06-01 16:11:22');
 
 -- ----------------------------
 -- Table structure for student_status
@@ -1179,7 +1259,7 @@ CREATE TABLE `student_status`  (
 INSERT INTO `student_status` VALUES (10, 'focusing', '2026-05-31 14:34:31');
 INSERT INTO `student_status` VALUES (12, 'idle', '2026-05-25 17:21:00');
 INSERT INTO `student_status` VALUES (13, 'idle', '2026-05-25 17:04:24');
-INSERT INTO `student_status` VALUES (14, 'focusing', '2026-05-31 22:35:42');
+INSERT INTO `student_status` VALUES (14, 'focusing', '2026-06-01 00:31:19');
 INSERT INTO `student_status` VALUES (16, 'idle', '2026-05-25 16:24:28');
 
 -- ----------------------------
@@ -1247,13 +1327,13 @@ CREATE TABLE `user`  (
   INDEX `idx_user_class`(`class_id` ASC) USING BTREE,
   INDEX `idx_user_status`(`status` ASC) USING BTREE,
   CONSTRAINT `user_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `class_info` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 18 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 43 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user
 -- ----------------------------
 INSERT INTO `user` VALUES (1, NULL, 'admin', '$2a$10$rvZS5UeASnVqg3q2I0rBn.PPuuDLE7dIWKeS9y66zUx/2.mYTCpnK', '系统管理员', NULL, 'admin@univ.edu.cn', NULL, 3, NULL, NULL, NULL, 1, '2026-05-24 21:00:49', NULL, NULL);
-INSERT INTO `user` VALUES (2, NULL, 'zhangmy', '$2a$10$SNK3QLbEp6USeEABw2o66uW4IqotDyYJkECWPqooCPVsB.vqJRqFW', '张明远', NULL, 'zhangmy@univ.edu.cn', NULL, 2, NULL, NULL, NULL, 1, '2026-05-24 21:00:49', '2026-05-30 22:41:35', NULL);
+INSERT INTO `user` VALUES (2, NULL, 'zhangmy', '$2a$10$SNK3QLbEp6USeEABw2o66uW4IqotDyYJkECWPqooCPVsB.vqJRqFW', '张明远', NULL, 'zhangmy@univ.edu.cn', NULL, 2, NULL, NULL, NULL, 1, '2026-05-24 21:00:49', '2026-06-01 14:03:19', 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIyIiwidXNlcm5hbWUiOiJ6aGFuZ215Iiwicm9sZSI6MiwiaWF0IjoxNzgwMjkzNzk4LCJleHAiOjE3ODAzODAxOTh9.M3SL2oZ0VDYcKS7XANHoXrz5Bf5HWuhqThFRgCiOoPK6KlD8VTpJx5z2_kYEtCFfO8S9xENGyKZtkA11Wlv6bA');
 INSERT INTO `user` VALUES (3, NULL, 'liwq', '$2a$10$ZaGnuM/lDsPeSdNqI.6JhOgHrZSJX.FZzmAxw35MlD6xmu7/a85kG', '李伟强', NULL, 'liwq@univ.edu.cn', NULL, 2, NULL, NULL, NULL, 1, '2026-05-24 21:00:49', NULL, NULL);
 INSERT INTO `user` VALUES (4, NULL, 'wanglh', '$2a$10$/uHNv.zhtzMRNS4ufrBLB.WbJou8k.pZU/X0Ftam0qup9/TFBllLy', '王丽华', NULL, 'wanglh@univ.edu.cn', NULL, 2, NULL, NULL, NULL, 1, '2026-05-24 21:00:49', NULL, NULL);
 INSERT INTO `user` VALUES (5, NULL, 'chenjf', '$2a$10$X4dA.oFZpflsNTSGERYyDedHe/vQdBOclbicoNTwvEDrfzOhoeYYu', '陈建峰', NULL, 'chenjf@univ.edu.cn', NULL, 2, NULL, NULL, NULL, 1, '2026-05-24 21:00:49', NULL, NULL);
@@ -1269,6 +1349,31 @@ INSERT INTO `user` VALUES (14, '20250102001', 'student5', '$2a$10$3mm3KeXTx94Fdh
 INSERT INTO `user` VALUES (15, '20250102002', 'student6', '$2a$10$IVTbatKCLTt4iwgj.H49muDdPtI96IQm1kA87TqTIVRE3KgvHvBfe', '赵海龙', NULL, NULL, NULL, 1, 2, '教育技术学', '2023', 1, '2026-05-24 21:00:49', '2026-05-27 21:49:54', NULL);
 INSERT INTO `user` VALUES (16, '20250102003', 'student7', '$2a$10$zSJqdTeo925Ax8om7u1Bl.1EyEbugiyBLYu5FEKlYp1a25qJIOYK6', '孙悦然', NULL, NULL, NULL, 1, 2, '教育技术学', '2023', 1, '2026-05-24 21:00:49', '2026-05-25 16:24:04', NULL);
 INSERT INTO `user` VALUES (17, '20250102004', 'student8', '$2a$10$1h3KYd25wsBMHCJofbga2erdIwDkJWYIZsMpI0iQt2A1UuWxxn4CS', '周明达', NULL, NULL, NULL, 1, 2, '教育技术学', '2023', 1, '2026-05-24 21:00:49', NULL, NULL);
+INSERT INTO `user` VALUES (18, '2515100101', '2515100101', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '李丽萍', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (19, '2515100103', '2515100103', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '黄锦清', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (20, '2515100104', '2515100104', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '肖添', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (21, '2515100105', '2515100105', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '王奕苏', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (22, '2515100106', '2515100106', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '庞彩霞', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (23, '2515100107', '2515100107', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '蒙婉丽', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (24, '2515100108', '2515100108', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '吴海玲', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (25, '2515100109', '2515100109', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '宁德华', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (26, '2515100110', '2515100110', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '黄坤芳', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (27, '2515100111', '2515100111', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '吴欣容', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (28, '2515100112', '2515100112', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '李季隆', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (29, '2515100113', '2515100113', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '赵健宇', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (30, '2515100114', '2515100114', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '陆振国', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (31, '2515100115', '2515100115', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '杨舒岚', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (32, '2515100116', '2515100116', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '侯新焯', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (33, '2515100117', '2515100117', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '李秀芳', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (34, '2515100118', '2515100118', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '杨文娟', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (35, '2515100119', '2515100119', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '任志豪', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (36, '2515100120', '2515100120', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '黄朕', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (37, '2515100121', '2515100121', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '林丽萍', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (38, '2515100122', '2515100122', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '朱宇聪', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (39, '2515100123', '2515100123', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '杨术清', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (40, '2515100124', '2515100124', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '黄莹莹', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (41, '2515100125', '2515100125', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '罗帅', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
+INSERT INTO `user` VALUES (42, '2415100348', '2415100348', '$2a$10$oUhXGYV.nzO1RfASDAxHnOsOkF6geSkm5wrUM4gGqxduvCTMCoR7W', '韦秀珍', NULL, NULL, NULL, 1, NULL, '计算机科学与技术', '2023', 1, '2026-06-01 15:26:30', NULL, NULL);
 
 -- ----------------------------
 -- Table structure for user_profile
@@ -1308,6 +1413,5 @@ CREATE TABLE `wrong_analysis_cache`  (
 -- ----------------------------
 -- Records of wrong_analysis_cache
 -- ----------------------------
-INSERT INTO `wrong_analysis_cache` VALUES (14, '19', '{\"wrongCount\":26,\"bySubject\":[{\"subject\":\"其他\",\"count\":26,\"items\":[{\"question\":\"在Python中，以下哪个关键字用于定义函数？\",\"answerId\":131,\"knowledge\":\"Python函数定义的关键字是def。\",\"errorReason\":\"对Python基本语法不熟悉，混淆了变量定义和其他关键字。\",\"improve\":\"重点复习Python基础语法，特别是函数定义和常用关键字的用法。\"},{\"question\":\"以下哪种数据结构是不可变的？\",\"answerId\":132,\"knowledge\":\"Python中的元组（tuple）是不可变的数据结构。\",\"errorReason\":\"对数据结构的特性理解不清，误将列表视为不可变。\",\"improve\":\"加强对可变与不可变数据类型的区分，通过实例加深理解。\"},{\"question\":\"Python中的异常处理使用哪个关键字？\",\"answerId\":133,\"knowledge\":\"Python中使用try-except进行异常处理。\",\"errorReason\":\"对异常处理机制不熟悉，误认为有throw关键字。\",\"improve\":\"系统学习Python异常处理机制，掌握try、except、finally等关键字的用法。\"},{\"question\":\"以下哪个方法可以用来读取文件内容？\",\"answerId\":134,\"knowledge\":\"read()方法用于读取文件内容。\",\"errorReason\":\"未正确填写答案，可能对文件操作方法不熟悉。\",\"improve\":\"练习文件读写操作，掌握open、read、write等常用方法。\"},{\"question\":\"在Python中，如何将字符串转换为整数？\",\"answerId\":135,\"knowledge\":\"int()函数可用于将字符串转换为整数。\",\"errorReason\":\"混淆了float()和int()的功能。\",\"improve\":\"复习数值转换函数，明确int()和float()的区别。\"},{\"question\":\"以下哪个模块用于处理日期和时间？\",\"answerId\":137,\"knowledge\":\"datetime模块用于处理日期和时间。\",\"errorReason\":\"对标准库模块不熟悉，误选date模块。\",\"improve\":\"熟悉常用标准库模块，如datetime、json、os等。\"},{\"question\":\"Python支持多继承。\",\"answerId\":138,\"knowledge\":\"Python支持多继承。\",\"errorReason\":\"对Python面向对象特性理解错误。\",\"improve\":\"深入学习Python面向对象编程，了解继承、多继承等概念。\"},{\"question\":\"Python中，列表是不可变的数据类型。\",\"answerId\":139,\"knowledge\":\"列表是可变的数据类型。\",\"errorReason\":\"对数据结构的可变性判断错误。\",\"improve\":\"区分可变与不可变数据类型，如列表、元组、字符串等。\"},{\"question\":\"请解释Python中什么是装饰器，并举例说明其用途。\",\"answerId\":141,\"knowledge\":\"（分析生成中）\",\"errorReason\":\"（分析生成中）\",\"improve\":\"（分析生成中）\"},{\"question\":\"请描述Python中生成器（generator）的工作原理，并说明其与普通函数的区别。\",\"answerId\":142,\"knowledge\":\"（分析生成中）\",\"errorReason\":\"（分析生成中）\",\"improve\":\"（分析生成中）\"},{\"question\":\"请写出一个使用递归实现斐波那契数列的Python函数。\",\"answerId\":143,\"knowledge\":\"（分析生成中）\",\"errorReason\":\"（分析生成中）\",\"improve\":\"（分析生成中）\"},{\"question\":\"在Python中，__ 是用于定义类的关键字。\",\"answerId\":144,\"knowledge\":\"class是定义类的关键字。\",\"errorReason\":\"对Python面向对象语法不熟悉。\",\"improve\":\"复习类和对象的基本语法，掌握class关键字的用法。\"},{\"question\":\"Python中，使用 __ 模块来处理JSON数据。\",\"answerId\":145,\"knowledge\":\"json模块用于处理JSON数据。\",\"errorReason\":\"对标准库模块不熟悉。\",\"improve\":\"熟悉常用模块，如json、datetime、os等。\"},{\"question\":\"在数据结构中，以下哪种结构是按照先进先出（FIFO）原则进行操作的？\",\"answerId\":146,\"knowledge\":\"队列遵循FIFO原则。\",\"errorReason\":\"混淆了栈和队列的操作规则。\",\"improve\":\"复习数据结构中的栈和队列，理解它们的特性及应用场景。\"},{\"question\":\"Python语言中，用于定义函数的关键字是？\",\"answerId\":147,\"knowledge\":\"def是定义函数的关键字。\",\"errorReason\":\"对关键字记忆不清，混淆了class和def。\",\"improve\":\"强化记忆Python基础关键字，如def、class、import等。\"},{\"question\":\"微信小程序中，页面布局主要使用哪种技术实现？\",\"answerId\":148,\"knowledge\":\"微信小程序使用WXML作为页面布局语言。\",\"errorReason\":\"对前端开发技术不熟悉，误认为是CSS。\",\"improve\":\"了解不同平台的开发技术，如HTML、WXML、JS等。\"},{\"question\":\"在高级网站技术中，以下哪项不是前端开发的主要技术？\",\"answerId\":149,\"knowledge\":\"Java通常用于后端开发，不属于前端技术。\",\"errorReason\":\"对前后端技术划分不清。\",\"improve\":\"了解前端和后端技术区别，掌握HTML、CSS、JavaScript等前端核心技术。\"},{\"question\":\"多媒体课件设计中，以下哪项不属于交互设计的核心要素？\",\"answerId\":150,\"knowledge\":\"动画效果属于视觉设计而非核心交互要素。\",\"errorReason\":\"对交互设计概念理解不准确。\",\"improve\":\"学习交互设计的基本要素，如导航、反馈、用户控制等。\"},{\"question\":\"教师资格考试实务中，教学设计的核心环节是？\",\"answerId\":151,\"knowledge\":\"教学目标是教学设计的核心。\",\"errorReason\":\"对教学设计流程理解不清晰。\",\"improve\":\"掌握教学设计的基本步骤，重点理解教学目标的重要性。\"},{\"question\":\"在Java基础设计中，以下哪个关键字用于定义类的成员变量？\",\"answerId\":152,\"knowledge\":\"private用于封装类的成员变量。\",\"errorReason\":\"对访问修饰符的理解错误。\",\"improve\":\"复习Java访问控制修饰符，掌握public、private、protected的区别。\"},{\"question\":\"在微课制作中，视频时长越长越好，能涵盖更多内容。\",\"answerId\":155,\"knowledge\":\"微课应精简，不宜过长。\",\"errorReason\":\"对微课设计理念理解错误。\",\"improve\":\"学习微课设计原则，注重内容精炼和效率。\"},{\"question\":\"请简述数据结构中栈和队列的区别，并说明它们各自的应用场景。\",\"answerId\":156,\"knowledge\":\"（分析生成中）\",\"errorReason\":\"（分析生成中）\",\"improve\":\"（分析生成中）\"},{\"question\":\"请解释在教师口语训练中，如何通过语调、语速和停顿来提升表达效果。\",\"answerId\":157,\"knowledge\":\"（分析生成中）\",\"errorReason\":\"（分析生成中）\",\"improve\":\"（分析生成中）\"},{\"question\":\"请说明在高级网站技术中，响应式网页设计的基本原理及其重要性。\",\"answerId\":158,\"knowledge\":\"（分析生成中）\",\"errorReason\":\"（分析生成中）\",\"improve\":\"（分析生成中）\"},{\"question\":\"在数据结构中，线性表的存储方式包括顺序存储和______存储。\",\"answerId\":159,\"knowledge\":\"（分析生成中）\",\"errorReason\":\"（分析生成中）\",\"improve\":\"（分析生成中）\"},{\"question\":\"在教师资格考试实务中，教学反思的目的是为了不断优化______和教学策略。\",\"answerId\":160,\"knowledge\":\"（分析生成中）\",\"errorReason\":\"（分析生成中）\",\"improve\":\"（分析生成中）\"}]}],\"studentName\":\"刘晓雨\",\"summary\":\"刘晓雨同学在多个科目中出现基础概念掌握不牢的问题，尤其在编程语言和教学设计方面表现较弱，需加强基础知识学习与理解。\",\"cached\":false}', '2026-05-31 22:35:57');
 
 SET FOREIGN_KEY_CHECKS = 1;

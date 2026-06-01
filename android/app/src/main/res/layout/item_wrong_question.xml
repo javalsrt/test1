@@ -16,21 +16,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:lineSpacingExtra="4dp"
-            android:textColor="#1D1D1F"
-            android:textSize="15sp" />
+            android:textColor="@color/ink_muted"
+            android:textSize="14sp" />
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="14dp" />
+        <View android:layout_width="match_parent" android:layout_height="14dp" />
 
         <!-- 错因 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="❌ 错因分析"
-            android:textColor="#FF3B30"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:textColor="@color/danger"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium" />
 
         <TextView
             android:id="@+id/tv_error"
@@ -38,21 +36,19 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:lineSpacingExtra="3dp"
-            android:textColor="#3C3C43"
+            android:textColor="@color/ink"
             android:textSize="14sp" />
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="12dp" />
+        <View android:layout_width="match_parent" android:layout_height="12dp" />
 
         <!-- 改进 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="💡 改进建议"
-            android:textColor="#34C759"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:textColor="@color/success"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium" />
 
         <TextView
             android:id="@+id/tv_improve"
@@ -60,7 +56,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:lineSpacingExtra="3dp"
-            android:textColor="#3C3C43"
+            android:textColor="@color/ink"
             android:textSize="14sp" />
     </LinearLayout>
 </ScrollView>

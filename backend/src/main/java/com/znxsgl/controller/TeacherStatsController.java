@@ -157,6 +157,30 @@ public class TeacherStatsController {
             "(SELECT class_id FROM user WHERE id = ?) AND role = 1) GROUP BY f.user_id) t",
             Double.class, studentId);
 
+        // 最新六维评分
+        List<Map<String, Object>> scores = new ArrayList<>();
+        try {
+            Map<String, Object> scoreRow = jdbc.queryForMap(
+                "SELECT s.scores FROM quiz_session s WHERE s.user_id = ? AND s.status = 'evaluated' ORDER BY s.created_at DESC LIMIT 1",
+                studentId);
+            if (scoreRow != null && scoreRow.get("scores") != null) {
+                String scoresJson = scoreRow.get("scores").toString();
+                // scores是JSON Map格式 {"逻辑思维力":8, "判断决策力":7, ...}
+                // 转化为列表
+                scoresJson = scoresJson.replaceAll("[{}\"]", "");
+                for (String pair : scoresJson.split(",")) {
+                    String[] kv = pair.split(":");
+                    if (kv.length == 2) {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("name", kv[0].trim());
+                        try { item.put("value", Integer.parseInt(kv[1].trim())); }
+                        catch (NumberFormatException e) { item.put("value", 0); }
+                        scores.add(item);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
         Map<String, Object> result = new HashMap<>();
         result.put("info", info);
         result.put("focusTrend", focusTrend);
@@ -164,6 +188,7 @@ public class TeacherStatsController {
         result.put("questions", questions);
         result.put("loginDays", loginDays);
         result.put("classAvgMinutes", classAvgSec != null ? (int)(classAvgSec / 60) : 0);
+        result.put("scores", scores);
         return ResponseEntity.ok(result);
     }
 
