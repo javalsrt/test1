@@ -319,6 +319,7 @@ public class ProfileFragment extends Fragment {
                     courseList.addAll(items);
                     restoreCourseOrder();
                     adapter.notifyDataSetChanged();
+                    rvCourses.requestLayout();
                     Toast.makeText(getContext(), "已加载" + courseList.size() + "门课", Toast.LENGTH_SHORT).show();
                 });
             }
