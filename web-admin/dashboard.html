@@ -602,6 +602,9 @@
         html += '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">';
         // 在线课程：显示每个班级的排课按钮
         if (active) {
+            html += '<button style="padding:4px 12px;font-size:12px;background:#F0F4FF;color:#5E6AD2;'
+                + 'border:1px solid #D8E4FF;border-radius:6px;cursor:pointer;" '
+                + 'onclick="openChatModal(\'' + escJs(c.courseName) + '\')">💬 聊天</button>';
             classData.forEach(cl => {
                 const sched = cl.scheduled === true || cl.scheduled === 'true';
                 html += '<button style="padding:3px 8px;font-size:11px;background:#E8F0FE;color:#0A84FF;'
@@ -609,9 +612,6 @@
                     + 'onclick="openSchedulePlannerById(' + c.courseId + ',' + cl.classId + ',' + sched + ')">'
                     + (sched ? '📝 ' : '📅 ') + escHtml(cl.className) + '</button>';
             });
-            html += '<button style="padding:4px 12px;font-size:12px;background:#F0F4FF;color:#5E6AD2;'
-                + 'border:1px solid #D8E4FF;border-radius:6px;cursor:pointer;" '
-                + 'onclick="openChatModal(\'' + escJs(c.courseName) + '\')">💬 聊天</button>';
             html += '<button style="padding:4px 12px;font-size:12px;background:none;color:#C7C7CC;'
                 + 'border:1px solid #E5E7EB;border-radius:6px;cursor:pointer;" '
                 + 'onclick="hideCourseById(' + c.courseId + ')">下架</button>';
