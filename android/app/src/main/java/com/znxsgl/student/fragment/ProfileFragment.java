@@ -373,9 +373,11 @@ public class ProfileFragment extends Fragment implements WebSocketManager.OnChat
                 holder.status.setText("已下架");
             }
 
-            if (c.getUnreadCount() > 0) {
+            // 未读红点（从unreadMap实时获取）
+            int unread = unreadMap.getOrDefault(c.getCourseName(), 0);
+            if (unread > 0) {
                 holder.badge.setVisibility(View.VISIBLE);
-                holder.badge.setText(String.valueOf(c.getUnreadCount()));
+                holder.badge.setText(unread > 99 ? "99+" : String.valueOf(unread));
             } else {
                 holder.badge.setVisibility(View.GONE);
             }

@@ -200,32 +200,63 @@ public class CourseDetailActivity extends AppCompatActivity {
     }
 
     private Callback<ChatMsgDto> aiCallback(int aiPos) {
+        final int finalPos = aiPos;
         return new Callback<ChatMsgDto>() {
             @Override
             public void onResponse(Call<ChatMsgDto> call, retrofit2.Response<ChatMsgDto> resp) {
-                runOnUiThread(() -> {
-                    if (aiPos >= items.size()) return;
-                    ChatMsgDto m = (ChatMsgDto) items.get(aiPos);
-                    if (resp.isSuccessful() && resp.body() != null) {
-                        m.setContent(resp.body().getContent());
-                        m.setCreatedAt(resp.body().getCreatedAt());
-                    } else {
-                        m.setContent("（AI 回复失败）");
+                if (finalPos >= items.size()) return;
+                final String fullText;
+                final String createdAt;
+                if (resp.isSuccessful() && resp.body() != null) {
+                    fullText = resp.body().getContent();
+                    createdAt = resp.body().getCreatedAt();
+                } else {
+                    fullText = "（AI 回复失败）";
+                    createdAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+                }
+                final String finalCreatedAt = createdAt;
+                // 流式逐字输出
+                streamCharIdx = 0;
+                streamFullText = fullText;
+                streamMsgPos = finalPos;
+                isStreaming = true;
+                streamHandler.removeCallbacksAndMessages(null);
+                streamHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!isStreaming || streamMsgPos != finalPos) return;
+                        if (finalPos >= items.size()) return;
+                        ChatMsgDto m = (ChatMsgDto) items.get(finalPos);
+                        if (streamCharIdx < streamFullText.length()) {
+                            streamCharIdx++;
+                            m.setContent(streamFullText.substring(0, streamCharIdx) + "▌");
+                            if (streamCharIdx == streamFullText.length()) {
+                                m.setCreatedAt(finalCreatedAt);
+                            }
+                            adapter.notifyItemChanged(finalPos);
+                            rvChat.scrollToPosition(finalPos);
+                            streamHandler.postDelayed(this, STREAM_INTERVAL_MS);
+                        } else {
+                            // 完成
+                            m.setContent(streamFullText);
+                            m.setCreatedAt(finalCreatedAt);
+                            adapter.notifyItemChanged(finalPos);
+                            isStreaming = false;
+                        }
                     }
-                    adapter.notifyItemChanged(aiPos);
-                    rvChat.scrollToPosition(aiPos);
                 });
             }
             @Override
             public void onFailure(Call<ChatMsgDto> call, Throwable t) {
                 Log.e(TAG, "AI请求失败", t);
                 runOnUiThread(() -> {
-                    if (aiPos < items.size()) {
-                        ChatMsgDto m = (ChatMsgDto) items.get(aiPos);
+                    if (finalPos < items.size()) {
+                        ChatMsgDto m = (ChatMsgDto) items.get(finalPos);
                         m.setContent("（网络超时，请重试）");
-                        adapter.notifyItemChanged(aiPos);
+                        adapter.notifyItemChanged(finalPos);
                     }
                 });
+                isStreaming = false;
             }
         };
     }
