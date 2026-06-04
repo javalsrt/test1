@@ -1953,7 +1953,7 @@
         try {
             const res = await fetch(API + '/api/chat/send', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ courseName: chatCourse, content: text })
+                body: JSON.stringify({ courseName: chatCourse, content: text, senderRole: 'teacher' })
             });
             if (res.ok) loadChatMessages();
         } catch(e) {}
@@ -1973,7 +1973,7 @@
             if (data.url) {
                 await fetch(API + '/api/chat/send', {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ courseName: chatCourse, content: '[image]' + data.url })
+                    body: JSON.stringify({ courseName: chatCourse, content: '[image]' + data.url, senderRole: 'teacher' })
                 });
                 loadChatMessages();
             }
@@ -1995,7 +1995,7 @@
             if (data.url) {
                 await fetch(API + '/api/chat/send', {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ courseName: chatCourse, content: '[file]' + file.name + '|' + data.url })
+                    body: JSON.stringify({ courseName: chatCourse, content: '[file]' + file.name + '|' + data.url, senderRole: 'teacher' })
                 });
                 loadChatMessages();
             }
@@ -2038,7 +2038,7 @@
                 // 发送签到消息到聊天
                 await fetch(API + '/api/chat/send', {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ courseName: chatCourse, content: '✅ ' + (userName || '用户') + ' 签到成功' })
+                    body: JSON.stringify({ courseName: chatCourse, content: '✅ ' + (userName || '用户') + ' 签到成功', senderRole: 'teacher' })
                 });
                 loadChatMessages();
             }

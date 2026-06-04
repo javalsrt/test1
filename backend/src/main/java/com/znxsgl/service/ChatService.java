@@ -29,12 +29,14 @@ public class ChatService {
         this.courseMapper = courseMapper;
     }
 
-    // 获取课程聊天记录（个人对话）
+    // 获取课程聊天记录（学生看：自己的消息 + 教师消息 + 所有AI回复）
     public List<ChatMessageDTO> getMessages(String courseName, Long userId) {
         List<ChatMessage> msgs = chatMapper.selectList(
                 new LambdaQueryWrapper<ChatMessage>()
                         .eq(ChatMessage::getCourseName, courseName)
-                        .eq(ChatMessage::getUserId, userId)
+                        .and(w -> w.eq(ChatMessage::getUserId, userId)
+                                .or().eq(ChatMessage::getSenderRole, "teacher")
+                                .or().eq(ChatMessage::getSenderRole, "ai"))
                         .orderByAsc(ChatMessage::getCreatedAt));
         return msgs.stream().map(this::toDto).collect(Collectors.toList());
     }
