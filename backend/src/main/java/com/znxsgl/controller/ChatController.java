@@ -72,11 +72,8 @@ public class ChatController {
         // 如果 @了AI，触发AI回复
         if (content != null && (content.contains("@AI") || content.contains("@ai"))) {
             try {
-                StringBuilder prompt = new StringBuilder();
-                prompt.append("你是《").append(courseName).append("》课程的智能助教。");
-                String ragCtx = ragService.retrieveContext(courseName, content.replace("@AI", "").replace("@ai", "").trim());
-                if (!ragCtx.isEmpty()) prompt.append("\n\n").append(ragCtx);
-                String aiReply = aiService.chat(prompt.toString(), content.replace("@AI", "").replace("@ai", "").trim());
+                String aiReply = aiService.chat(buildSystemPrompt(courseName, ragContext(content, courseName)),
+                        content.replace("@AI", "").replace("@ai", "").trim());
                 chatService.sendMessage(courseName, userId, aiReply, "ai", mentionUserId);
             } catch (Exception ignored) {}
         }
@@ -138,17 +135,8 @@ public class ChatController {
             System.out.println("=== RAG 检索失败（可能表未创建）: " + e.getMessage());
         }
 
-        // 3. 构建带 RAG 上下文的 prompt
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("你是《").append(courseName).append("》课程的智能助教。");
-        prompt.append("请只回答与这门课程相关的问题。");
-        if (!ragContext.isEmpty()) {
-            prompt.append("\n\n").append(ragContext);
-            prompt.append("\n请根据以上参考内容回答学生问题。如果参考内容与问题无关，请基于你的知识回答。");
-        }
-
-        // 4. 调用 AI
-        String aiReply = aiService.chat(prompt.toString(), content);
+        // 3. 调用 AI
+        String aiReply = aiService.chat(buildSystemPrompt(courseName, ragContext), content);
         return ResponseEntity.ok(chatService.sendMessage(courseName, userId, aiReply, "ai"));
     }
 
@@ -244,5 +232,31 @@ public class ChatController {
             "GROUP BY cm.course_name",
             userId, userId);
         return ResponseEntity.ok(result);
+    }
+
+    // ========== 私有辅助方法 ==========
+
+    /** 构建统一 system prompt */
+    private String buildSystemPrompt(String courseName, String ragContext) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是《").append(courseName).append("》课程的智能助教。严格遵守以下规则：\n");
+        sb.append("1. 只回答与《").append(courseName).append("》课程直接相关的内容，拒绝无关问题。\n");
+        sb.append("2. 回答简洁直接，不要寒暄、不要反问、不要说「还有什么需要帮助吗」。\n");
+        sb.append("3. 不要使用Markdown格式（如**加粗**、#标题），用纯文本输出。\n");
+        sb.append("4. 如果需要列表，用数字或-开头，不使用*加粗。\n");
+        sb.append("5. 不要添加免责声明、备注或额外建议，只说该说的内容。");
+        if (!ragContext.isEmpty()) {
+            sb.append("\n\n参考材料：\n").append(ragContext);
+        }
+        return sb.toString();
+    }
+
+    /** 获取 RAG 上下文 */
+    private String ragContext(String content, String courseName) {
+        try {
+            return ragService.retrieveContext(courseName, content);
+        } catch (Exception e) {
+            return "";
+        }
     }
 }
