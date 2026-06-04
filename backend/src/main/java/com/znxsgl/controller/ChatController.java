@@ -31,12 +31,18 @@ public class ChatController {
         this.ragService = ragService;
     }
 
-    // 获取课程聊天记录
+    // 获取课程聊天记录（个人：学生看自己的AI对话，按userId过滤）
     @GetMapping("/{courseName}")
     public ResponseEntity<List<ChatMessageDTO>> getMessages(
             @PathVariable String courseName, Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
         return ResponseEntity.ok(chatService.getMessages(courseName, userId));
+    }
+
+    // 获取课程公开聊天（群聊：教师/学生都能看到所有人的消息）
+    @GetMapping("/{courseName}/public")
+    public ResponseEntity<List<ChatMessageDTO>> getPublicMessages(@PathVariable String courseName) {
+        return ResponseEntity.ok(chatService.getPublicMessages(courseName));
     }
 
     // 发送消息

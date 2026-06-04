@@ -1914,7 +1914,7 @@
         const body = document.getElementById('chatBody');
         if (!body) return;
         try {
-            const res = await fetch(API + '/api/chat/' + encodeURIComponent(chatCourse), {
+            const res = await fetch(API + '/api/chat/' + encodeURIComponent(chatCourse) + '/public', {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
             const msgs = await res.json();

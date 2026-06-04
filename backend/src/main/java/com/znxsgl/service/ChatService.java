@@ -29,12 +29,21 @@ public class ChatService {
         this.courseMapper = courseMapper;
     }
 
-    // 获取课程聊天记录
+    // 获取课程聊天记录（个人对话）
     public List<ChatMessageDTO> getMessages(String courseName, Long userId) {
         List<ChatMessage> msgs = chatMapper.selectList(
                 new LambdaQueryWrapper<ChatMessage>()
                         .eq(ChatMessage::getCourseName, courseName)
                         .eq(ChatMessage::getUserId, userId)
+                        .orderByAsc(ChatMessage::getCreatedAt));
+        return msgs.stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    // 获取课程公开聊天（群聊，不过滤userId）
+    public List<ChatMessageDTO> getPublicMessages(String courseName) {
+        List<ChatMessage> msgs = chatMapper.selectList(
+                new LambdaQueryWrapper<ChatMessage>()
+                        .eq(ChatMessage::getCourseName, courseName)
                         .orderByAsc(ChatMessage::getCreatedAt));
         return msgs.stream().map(this::toDto).collect(Collectors.toList());
     }
