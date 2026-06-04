@@ -136,6 +136,7 @@ public class ProfileFragment extends Fragment implements WebSocketManager.OnChat
         super.onResume();
         if (isAdded() && prefs != null) {
             loadCourses();
+            loadUnreadCounts();
             loadFocusTotal();
             loadBookmarkCount(getView());
         }

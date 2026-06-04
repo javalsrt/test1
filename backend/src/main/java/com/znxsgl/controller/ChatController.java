@@ -237,7 +237,7 @@ public class ChatController {
         List<Map<String, Object>> result = jdbc.queryForList(
             "SELECT cm.course_name AS courseName, COUNT(*) AS count " +
             "FROM chat_message cm " +
-            "WHERE cm.user_id != ? " +
+            "WHERE cm.user_id != ? AND cm.is_read = 0 " +
             "AND cm.course_name IN (SELECT c.course_name FROM course c " +
             "  JOIN course_class cc ON cc.course_id = c.id " +
             "  JOIN user u ON u.class_id = cc.class_id WHERE u.id = ?) " +
