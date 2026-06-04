@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS check_in_record (
     checked_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 为 chat_message 补充索引（已有表则跳过）
-ALTER TABLE chat_message ADD INDEX idx_course_name (course_name);
-ALTER TABLE chat_message ADD INDEX idx_created_at (created_at);
+-- 为 chat_message 补充索引
+ALTER TABLE chat_message ADD COLUMN IF NOT EXISTS mention_user_id BIGINT NULL;
+ALTER TABLE chat_message ADD INDEX IF NOT EXISTS idx_course_name (course_name);
+ALTER TABLE chat_message ADD INDEX IF NOT EXISTS idx_created_at (created_at);

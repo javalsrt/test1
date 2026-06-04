@@ -52,7 +52,7 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getPublicMessages(courseName));
     }
 
-    // 发送消息
+    // 发送消息（支持 @mention 和 @AI）
     @PostMapping("/send")
     public ResponseEntity<ChatMessageDTO> sendMessage(
             @RequestBody Map<String, String> body, Authentication auth) {
@@ -61,34 +61,59 @@ public class ChatController {
         String content = body.get("content");
         String senderRole = body.getOrDefault("senderRole", "student");
 
-        ChatMessageDTO msg = chatService.sendMessage(courseName, userId, content, senderRole);
+        // 检测 @mention
+        Long mentionUserId = null;
+        if (content != null && content.contains("@")) {
+            mentionUserId = chatService.parseMention(courseName, content);
+        }
 
-        // 推送实时通知给课程所有学生
+        ChatMessageDTO msg = chatService.sendMessage(courseName, userId, content, senderRole, mentionUserId);
+
+        // 如果 @了AI，触发AI回复
+        if (content != null && (content.contains("@AI") || content.contains("@ai"))) {
+            try {
+                StringBuilder prompt = new StringBuilder();
+                prompt.append("你是《").append(courseName).append("》课程的智能助教。");
+                String ragCtx = ragService.retrieveContext(courseName, content.replace("@AI", "").replace("@ai", "").trim());
+                if (!ragCtx.isEmpty()) prompt.append("\n\n").append(ragCtx);
+                String aiReply = aiService.chat(prompt.toString(), content.replace("@AI", "").replace("@ai", "").trim());
+                chatService.sendMessage(courseName, userId, aiReply, "ai", mentionUserId);
+            } catch (Exception ignored) {}
+        }
+
+        // WebSocket推送：@消息只推送给被@的人
         try {
-            List<Long> studentIds = jdbc.queryForList(
-                "SELECT DISTINCT u.id FROM user u " +
-                "JOIN course_class cc ON cc.class_id = u.class_id " +
-                "JOIN course c ON c.id = cc.course_id " +
-                "WHERE c.course_name = ? AND u.role = 1 AND u.id != ?",
-                Long.class, courseName, userId);
             String preview;
-            if (content.startsWith("[image]")) {
-                preview = "📷 [图片]";
-            } else if (content.startsWith("[file]")) {
-                String fn = content.substring(6);
-                int pSep = fn.indexOf('|');
-                String fname = pSep > 0 ? fn.substring(0, pSep) : fn;
-                preview = "📄 [文件] " + (fname.length() > 20 ? fname.substring(0, 20) + "..." : fname);
-            } else {
-                preview = content.length() > 60 ? content.substring(0, 60) + "..." : content;
-            }
-            for (Long sid : studentIds) {
+            if (content.startsWith("[image]")) preview = "📷 [图片]";
+            else if (content.startsWith("[file]")) {
+                String fn = content.substring(6); int ps = fn.indexOf('|');
+                preview = "📄 [文件] " + (ps > 0 ? fn.substring(0, Math.min(ps, 20)) : fn.substring(0, 20));
+            } else preview = content.length() > 60 ? content.substring(0, 60) + "..." : content;
+
+            if (mentionUserId != null) {
+                // @消息只推送给目标学生
                 Map<String, Object> data = new LinkedHashMap<>();
                 data.put("courseName", courseName);
                 data.put("senderName", msg.getSenderName());
                 data.put("content", preview);
                 data.put("senderRole", senderRole);
-                wsHandler.sendToUser(sid, "chat_update", data);
+                wsHandler.sendToUser(mentionUserId, "chat_update", data);
+            } else {
+                // 公开消息推送给所有学生
+                List<Long> studentIds = jdbc.queryForList(
+                    "SELECT DISTINCT u.id FROM user u " +
+                    "JOIN course_class cc ON cc.class_id = u.class_id " +
+                    "JOIN course c ON c.id = cc.course_id " +
+                    "WHERE c.course_name = ? AND u.role = 1 AND u.id != ?",
+                    Long.class, courseName, userId);
+                for (Long sid : studentIds) {
+                    Map<String, Object> data = new LinkedHashMap<>();
+                    data.put("courseName", courseName);
+                    data.put("senderName", msg.getSenderName());
+                    data.put("content", preview);
+                    data.put("senderRole", senderRole);
+                    wsHandler.sendToUser(sid, "chat_update", data);
+                }
             }
         } catch (Exception ignored) {}
 

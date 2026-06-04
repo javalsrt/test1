@@ -12,9 +12,7 @@ import com.znxsgl.mapper.UserMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -33,29 +31,43 @@ public class ChatService {
         this.courseMapper = courseMapper;
     }
 
-    // 获取课程聊天记录（学生看：自己的消息 + 教师消息 + 所有AI回复）
+    // 获取课程聊天记录（学生看：自己的消息 + @自己的消息 + 公开教师消息 + AI回复）
     public List<ChatMessageDTO> getMessages(String courseName, Long userId) {
         List<ChatMessage> msgs = chatMapper.selectList(
                 new LambdaQueryWrapper<ChatMessage>()
                         .eq(ChatMessage::getCourseName, courseName)
                         .and(w -> w.eq(ChatMessage::getUserId, userId)
-                                .or().eq(ChatMessage::getSenderRole, "teacher")
+                                .or().isNull(ChatMessage::getMentionUserId)
+                                .or().eq(ChatMessage::getMentionUserId, userId)
                                 .or().eq(ChatMessage::getSenderRole, "ai"))
                         .orderByAsc(ChatMessage::getCreatedAt));
         return msgs.stream().map(this::toDto).collect(Collectors.toList());
     }
 
-    // 获取课程公开聊天（群聊，不过滤userId）
+    // 获取课程公开聊天（教师端看全部，AI消息显示"AI对{学生}说"）
     public List<ChatMessageDTO> getPublicMessages(String courseName) {
         List<ChatMessage> msgs = chatMapper.selectList(
                 new LambdaQueryWrapper<ChatMessage>()
                         .eq(ChatMessage::getCourseName, courseName)
                         .orderByAsc(ChatMessage::getCreatedAt));
-        return msgs.stream().map(this::toDto).collect(Collectors.toList());
+        return msgs.stream().map(m -> {
+            ChatMessageDTO d = toDto(m);
+            if ("ai".equals(m.getSenderRole())) {
+                User student = userMapper.selectById(m.getUserId());
+                String studentName = student != null ? student.getRealName() : "学生";
+                d.setSenderName("AI对" + studentName + "说");
+            }
+            return d;
+        }).collect(Collectors.toList());
     }
 
-    // 发送消息
+    // 发送消息（支持 @mention）
     public ChatMessageDTO sendMessage(String courseName, Long userId, String content, String senderRole) {
+        return sendMessage(courseName, userId, content, senderRole, null);
+    }
+
+    /** 发送消息，支持 @mention */
+    public ChatMessageDTO sendMessage(String courseName, Long userId, String content, String senderRole, Long mentionUserId) {
         User user = userMapper.selectById(userId);
 
         ChatMessage msg = new ChatMessage();
@@ -65,9 +77,27 @@ public class ChatService {
         msg.setSenderRole(senderRole);
         msg.setContent(content);
         msg.setCreatedAt(LocalDateTime.now());
+        msg.setMentionUserId(mentionUserId);
         chatMapper.insert(msg);
 
         return toDto(msg);
+    }
+
+    /** 解析 content 中的 @username，返回匹配的用户ID */
+    public Long parseMention(String courseName, String content) {
+        if (content == null) return null;
+        Pattern p = Pattern.compile("@(\\S+)");
+        Matcher m = p.matcher(content);
+        if (m.find()) {
+            String name = m.group(1);
+            // 查找该课程班级中的学生
+            List<User> users = userMapper.selectList(
+                new LambdaQueryWrapper<User>()
+                    .eq(User::getRealName, name)
+                    .eq(User::getRole, 1));
+            if (!users.isEmpty()) return users.get(0).getId();
+        }
+        return null;
     }
 
     /** 教师查看学生提问统计（验证教师拥有该课程） */
