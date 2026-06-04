@@ -565,6 +565,8 @@
         html += '<span style="font-size:16px;font-weight:600;color:' + nameColor + ';">' + escHtml(c.courseName) + '</span>';
         html += '<span style="font-size:11px;color:#86868B;background:#F5F5F7;padding:2px 10px;border-radius:20px;">'
             + escHtml(c.semester || '2025-2026-2') + '</span>';
+        html += '<span style="font-size:11px;color:#fff;background:#0A84FF;padding:4px 14px;border-radius:20px;cursor:pointer;font-weight:500;" '
+            + 'onclick="openChatModal(\'' + escJs(c.courseName) + '\')">班级</span>';
         if (!active) {
             html += '<span style="font-size:11px;color:#FF9500;background:#FFF8F0;padding:2px 10px;border-radius:20px;">已下架</span>';
         }
@@ -602,9 +604,6 @@
         html += '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">';
         // 在线课程：显示每个班级的排课按钮
         if (active) {
-            html += '<button style="padding:4px 12px;font-size:12px;background:#F0F4FF;color:#5E6AD2;'
-                + 'border:1px solid #D8E4FF;border-radius:6px;cursor:pointer;" '
-                + 'onclick="openChatModal(\'' + escJs(c.courseName) + '\')">💬 聊天</button>';
             classData.forEach(cl => {
                 const sched = cl.scheduled === true || cl.scheduled === 'true';
                 html += '<button style="padding:3px 8px;font-size:11px;background:#E8F0FE;color:#0A84FF;'
