@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>学习中心 · 管理后台</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         /* ===== iOS 简约风格主题 ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -207,12 +207,12 @@
         || location.hostname === '' || location.protocol === 'file:')
         ? 'http://localhost:8080' : '';
 
-    // ===== 全局 fetch 拦截：401 时踢出登录 =====
+    // ===== 全局 fetch 拦截：401/403 时踢出登录 =====
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
         const resp = await originalFetch.apply(this, args);
-        if (resp.status === 401) {
-            alert('账号已在其他设备登录，请重新登录');
+        if (resp.status === 401 || resp.status === 403) {
+            alert('登录已过期，请重新登录');
             localStorage.clear();
             window.location.href = 'login.html';
             throw new Error('unauthorized');
@@ -252,6 +252,64 @@
                 `<div style="text-align:center;padding:80px 0;color:#86868B;">功能开发中...</div>`;
         });
     });
+
+    // ===== 连接教师 WebSocket（接收学生上下线通知） =====
+    let teacherWs = null, wsFailCount = 0, wsConnectTimer = null;
+    function connectTeacherWs() {
+        if (teacherWs && teacherWs.readyState === WebSocket.OPEN) return;
+        if (wsFailCount >= 5) { console.log('WebSocket 已停止重连'); return; }
+
+        const wsBase = (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+            || location.hostname === '' || location.protocol === 'file:')
+            ? 'ws://localhost:8080' : location.origin.replace(/^http/, 'ws');
+        const wsUrl = wsBase + '/ws/schedule?userId=' + userId + '&role=teacher';
+
+        teacherWs = new WebSocket(wsUrl);
+
+        teacherWs.onopen = () => {
+            wsFailCount = 0;
+            console.log('教师 WebSocket 已连接');
+        };
+
+        teacherWs.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'student_online') updateStudentStatus(msg.data.userId, true);
+                else if (msg.type === 'student_offline') updateStudentStatus(msg.data.userId, false);
+            } catch (err) {}
+        };
+
+        teacherWs.onclose = () => {
+            teacherWs = null;
+            wsFailCount++;
+            if (wsConnectTimer) clearTimeout(wsConnectTimer);
+            wsConnectTimer = setTimeout(connectTeacherWs, wsFailCount >= 3 ? 30000 : 5000);
+        };
+        teacherWs.onerror = () => { teacherWs = null; };
+    }
+
+    function updateStudentStatus(userId, online) {
+        // 更新"活跃学生"表格中的在线状态
+        const row = document.querySelector('[data-uid="' + userId + '"]');
+        if (!row) return;
+        const statusCell = row.querySelector('.status');
+        if (!statusCell) return;
+        statusCell.className = 'status ' + (online ? 'on' : 'off');
+        statusCell.textContent = online ? '● 在线' : '● 离线';
+
+        // 刷新"今日在线"统计数字
+        const onlineCount = document.querySelectorAll('.status.on').length;
+        const statLabels = document.querySelectorAll('.stat-label');
+        for (const label of statLabels) {
+            if (label.textContent.includes('今日在线')) {
+                const valEl = label.nextElementSibling || label.parentElement.querySelector('.stat-value');
+                if (valEl) valEl.textContent = onlineCount;
+                break;
+            }
+        }
+    }
+
+    connectTeacherWs();
 
     // ===== 加载仪表盘 =====
     loadDashboard();
@@ -318,7 +376,7 @@
         students.forEach(s => {
             let todayMin = Math.round((s.todaySeconds || 0) / 60);
             let online = s.online === 1;
-            html += '<tr>' +
+            html += '<tr data-uid="' + (s.id || '') + '">' +
                 '<td>' + (s.realName || '') + '</td>' +
                 '<td>' + (s.studentNo || '') + '</td>' +
                 '<td>' + (s.className || '') + '</td>' +
@@ -447,23 +505,6 @@
             }
 
             content.innerHTML = html;
-            // 调试：检查卡片是否嵌套
-            setTimeout(() => {
-                const cards = content.querySelectorAll('.card');
-                console.log('===== 课程卡片 DOM 检查 =====');
-                cards.forEach((card, i) => {
-                    const id = card.id || '(no-id)';
-                    const name = card.querySelector('span') ? card.querySelector('span').textContent : '(no-name)';
-                    const parentId = card.parentElement ? (card.parentElement.id || card.parentElement.className) : '(root)';
-                    console.log('卡片' + i + ': id=' + id + ', 名称=' + name.substring(0,30) + ', 父元素=' + parentId);
-                    // 检查是否有卡片嵌套在另一个卡片中
-                    const nestedCards = card.querySelectorAll('.card');
-                    if (nestedCards.length > 0) {
-                        console.warn('⚠️ 卡片 ' + id + ' 内部嵌套了 ' + nestedCards.length + ' 个卡片！');
-                        nestedCards.forEach(nc => console.warn('  -> 嵌套: id=' + (nc.id || 'no-id')));
-                    }
-                });
-            }, 100);
         } catch (e) {
             content.innerHTML = '<div style="text-align:center;padding:60px;color:#FF3B30;">无法连接后端服务器</div>';
         }
@@ -732,15 +773,37 @@
                         } catch(e) {}
                         weekList.forEach(wn => {
                             selectedSlots.push({
-                                week: wn, dayOfWeek: s.day_of_week, startNode: s.start_node,
+                                week: Number(wn),
+                                dayOfWeek: Number(s.day_of_week),
+                                startNode: Number(s.start_node),
                                 startTime: s.start_time, endTime: s.end_time,
-                                credit: s.step || 2, step: s.step || 2,
+                                credit: Number(s.step || 2),
+                                step: Number(s.step || 2),
                                 classroom: s.classroom || '', semester: s.semester || '2025-2026-2',
-                                weeks: s.weeks || ('[' + wn + ']')
+                                weeks: '[' + wn + ']'
                             });
                         });
                     });
                 usedCredit = selectedSlots.reduce((sum, s) => sum + (s.credit || 2), 0);
+
+                // 若数据库记录超出课程总课时，按时间顺序裁剪多余 slot
+                if (usedCredit > totalCredit) {
+                    // 按 (week, day, startNode) 排序，保留靠前的
+                    selectedSlots.sort((a, b) =>
+                        (a.week || 0) - (b.week || 0) || (a.dayOfWeek || 0) - (b.dayOfWeek || 0) || (a.startNode || 0) - (b.startNode || 0));
+                    let cutCredit = 0;
+                    const keep = [];
+                    for (const s of selectedSlots) {
+                        cutCredit += (s.credit || 2);
+                        if (cutCredit <= totalCredit) { keep.push(s); } else { break; }
+                    }
+                    const dropped = selectedSlots.length - keep.length;
+                    selectedSlots = keep;
+                    usedCredit = selectedSlots.reduce((sum, s) => sum + (s.credit || 2), 0);
+                    if (dropped > 0) {
+                        alert('数据库排课记录超出课程总课时（' + totalCredit + '），已自动裁切最后 ' + dropped + ' 个时段。\n请检查并手动调整排课。');
+                    }
+                }
             } catch(e) {}
         }
 
@@ -787,12 +850,20 @@
                 headers: { 'Authorization': 'Bearer ' + token }
             });
             const data = await res.json();
-            // 按 (course_name, day_of_week, start_node) 去重
+            // 按 (course_name, day_of_week, start_node) 去重，并统一数字类型
             const seen = {};
             const uniqueSchedules = [];
             (data.schedules || []).forEach(s => {
                 const key = s.course_name + '-' + s.day_of_week + '-' + s.start_node;
-                if (!seen[key]) { seen[key] = true; uniqueSchedules.push(s); }
+                if (!seen[key]) {
+                    seen[key] = true;
+                    uniqueSchedules.push({
+                        ...s,
+                        day_of_week: Number(s.day_of_week),
+                        start_node: Number(s.start_node),
+                        step: Number(s.step || 2)
+                    });
+                }
             });
             schedulePlannerState.existingCourses = uniqueSchedules;
             renderPlannerTable();
@@ -903,9 +974,10 @@
                     if (occupiedMap[key]) { cellIsOther = true; cellCourseName = occupiedInfo[key].course_name; cellRoom = occupiedInfo[key].classroom || ''; break; }
                 }
                 
-                // Check if selected
+                // Check if selected (考虑多节课程 step 范围)
                 for (const node of p.nodes) {
-                    if (selected.find(s => s.week === week && s.dayOfWeek === day && s.startNode === node)) {
+                    if (selected.find(s => s.week === week && s.dayOfWeek === day
+                        && node >= s.startNode && node < s.startNode + (s.step || 2))) {
                         cellIsSelected = true; break;
                     }
                 }
@@ -913,13 +985,16 @@
                 let cellStyle, cellContent, onclick;
                 
                 if (cellIsSelected) {
-                    const selSlot = selected.find(s => s.week === week && s.dayOfWeek === day && p.nodes.includes(s.startNode));
+                    const selSlot = selected.find(s => s.week === week && s.dayOfWeek === day
+                        && p.nodes.some(n => n >= s.startNode && n < s.startNode + (s.step || 2)));
                     const sn = selSlot ? selSlot.startNode : p.nodes[0];
                     cellStyle = 'background:#34C759;border:2px solid #28A745;border-radius:6px;cursor:pointer;';
                     cellContent = `<div style="font-size:12px;color:#fff;font-weight:600;text-align:center;line-height:1.4;">${state.courseName}</div>`;
                     onclick = 'onclick="removeSlotByKey(' + day + ',' + sn + ',' + week + ')"';
                 } else if (cellIsOwn) {
-                    const ownSlot = selected.find(s => s.dayOfWeek === day && p.nodes.includes(s.startNode));
+                    // 灰色框：数据库已有记录，点击可从 selectedSlots 中移除（相当于取消该周排课）
+                    const ownSlot = selected.find(s => s.dayOfWeek === day
+                        && p.nodes.some(n => n >= s.startNode && n < s.startNode + (s.step || 2)));
                     const ownWk = ownSlot ? ownSlot.week : 1;
                     const ownSn = ownSlot ? ownSlot.startNode : p.nodes[0];
                     cellStyle = 'background:#E5E7EB;border:2px solid #C7C7CC;border-radius:6px;cursor:pointer;';
@@ -969,23 +1044,26 @@
     /** 切换空位选中状态（支持单课时选择） */
     function toggleSlot(day, startNode, startTime, endTime, week) {
         const state = schedulePlannerState;
-        // 检查该位置是否被任何在线课程占用（包括本门课程已排的）
+        // 检查该位置是否被任何在线课程占用（包括本门课程已排的，考虑 step 范围）
         const isOccupied = state.existingCourses.some(c =>
-            c.day_of_week === day && c.start_node === startNode);
+            c.day_of_week === day
+            && startNode >= c.start_node && startNode < c.start_node + (c.step || 2));
         if (isOccupied) return;
 
-        // 检查本门课程是否已在该位置选中（不限周次，防止重复添加）
-        const anyWeekIdx = state.selectedSlots.findIndex(s => s.dayOfWeek === day && s.startNode === startNode);
+        // 检查本门课程是否已在当前周选中（取消切换）
+        const anyWeekIdx = state.selectedSlots.findIndex(s => s.dayOfWeek === day
+            && startNode >= s.startNode && startNode < s.startNode + (s.step || 2));
         if (anyWeekIdx >= 0) {
-            // 如果已经在其他周选中，点击空位时允许重新在当前周选中
-            // 但如果当前周已有选中，则取消
-            const curWeekIdx = state.selectedSlots.findIndex(s => s.week === week && s.dayOfWeek === day && s.startNode === startNode);
+            const curWeekIdx = state.selectedSlots.findIndex(s => s.week === week && s.dayOfWeek === day
+                && startNode >= s.startNode && startNode < s.startNode + (s.step || 2));
             if (curWeekIdx >= 0) {
+                // 当前周已选中 → 取消
                 state.selectedSlots.splice(curWeekIdx, 1);
                 recalcRemaining();
                 renderPlannerTable();
                 return;
             }
+            // 其他周已选中 → 不影响，同位置不同周可共存（只要课时够）
         }
 
         const usedCredit = state.selectedSlots.reduce((sum, s) => sum + (s.credit || 2), 0);
@@ -1090,7 +1168,8 @@
         removeSlotByKey(day, startNode, week);
     }
     function removeSlotByKey(day, startNode, week) {
-        const idx = schedulePlannerState.selectedSlots.findIndex(s => s.week === week && s.dayOfWeek === day && s.startNode === startNode);
+        const idx = schedulePlannerState.selectedSlots.findIndex(s =>
+            s.week === week && s.dayOfWeek === day && s.startNode === startNode);
         if (idx >= 0) {
             schedulePlannerState.selectedSlots.splice(idx, 1);
             recalcRemaining();

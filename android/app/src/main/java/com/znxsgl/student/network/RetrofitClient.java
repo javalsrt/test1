@@ -39,13 +39,14 @@ public static String getBaseUrl() {
             HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
             logging.setLevel(HttpLoggingInterceptor.Level.BODY);
 
-            // 401 拦截器：账号在其他设备登录时踢出
+            // 401/403 拦截器：token 过期或账号在其他设备登录时跳转登录页
             Interceptor authInterceptor = chain -> {
                 Response response = chain.proceed(chain.request());
-                if (response.code() == 401 && appContext != null) {
+                int code = response.code();
+                if ((code == 401 || code == 403) && appContext != null) {
                     // 在主线程提示并跳转登录页
                     new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                        Toast.makeText(appContext, "账号已在其他设备登录，请重新登录", Toast.LENGTH_LONG).show();
+                        Toast.makeText(appContext, "登录已过期，请重新登录", Toast.LENGTH_LONG).show();
                         // 清除本地 token
                         SharedPreferences prefs = appContext.getSharedPreferences("znxsgl", 0);
                         prefs.edit().remove("token").remove("userId").apply();

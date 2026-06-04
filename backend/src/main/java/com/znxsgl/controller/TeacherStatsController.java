@@ -1,5 +1,6 @@
 package com.znxsgl.controller;
 
+import com.znxsgl.websocket.ScheduleWebSocketHandler;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -12,9 +13,11 @@ import java.util.*;
 public class TeacherStatsController {
 
     private final JdbcTemplate jdbc;
+    private final ScheduleWebSocketHandler wsHandler;
 
-    public TeacherStatsController(JdbcTemplate jdbc) {
+    public TeacherStatsController(JdbcTemplate jdbc, ScheduleWebSocketHandler wsHandler) {
         this.jdbc = jdbc;
+        this.wsHandler = wsHandler;
     }
 
     /** 教师数据总览 */
@@ -52,11 +55,15 @@ public class TeacherStatsController {
             "SELECT COUNT(*) FROM user WHERE class_id IN (" + placeholders + ") AND role = 1",
             Integer.class, params.toArray());
 
-        // 3. 今日在线（今天登录过）
-        int onlineToday = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user WHERE class_id IN (" + placeholders +
-            ") AND role = 1 AND DATE(last_login) = CURDATE()",
-            Integer.class, params.toArray());
+        // 3. 实时在线人数（基于 WebSocket 连接状态）
+        Set<Long> onlineIds = wsHandler.getOnlineStudentIds();
+        List<Long> studentIds = jdbc.queryForList(
+            "SELECT id FROM user WHERE class_id IN (" + placeholders + ") AND role = 1",
+            Long.class, params.toArray());
+        int onlineToday = 0;
+        for (Long sid : studentIds) {
+            if (onlineIds.contains(sid)) onlineToday++;
+        }
 
         // 4. 平均学习时长（分钟）
         Double avgSecObj = jdbc.queryForObject(
@@ -73,16 +80,22 @@ public class TeacherStatsController {
             "SELECT u.id, u.real_name AS realName, u.student_no AS studentNo, " +
             "  ci.class_name AS className, " +
             "  COALESCE(SUM(f.duration_seconds), 0) AS todaySeconds, " +
-            "  COALESCE(SUM(f2.duration_seconds), 0) AS totalSeconds, " +
-            "  CASE WHEN DATE(u.last_login) = CURDATE() THEN 1 ELSE 0 END AS online " +
+            "  COALESCE(SUM(f2.duration_seconds), 0) AS totalSeconds " +
             "FROM user u " +
             "LEFT JOIN class_info ci ON ci.id = u.class_id " +
             "LEFT JOIN focus_session f ON f.user_id = u.id AND DATE(f.finished_at) = CURDATE() " +
             "LEFT JOIN focus_session f2 ON f2.user_id = u.id " +
             "WHERE u.class_id IN (" + placeholders + ") AND u.role = 1 " +
-            "GROUP BY u.id, u.real_name, u.student_no, ci.class_name, u.last_login " +
+            "GROUP BY u.id, u.real_name, u.student_no, ci.class_name " +
             "ORDER BY todaySeconds DESC LIMIT 20",
             params.toArray());
+
+        // 用 WebSocket 实时在线状态替换数据库 last_login 判断
+        for (Map<String, Object> s : students) {
+            Object idObj = s.get("id");
+            Long uid = idObj instanceof Number ? ((Number) idObj).longValue() : null;
+            s.put("online", uid != null && onlineIds.contains(uid) ? 1 : 0);
+        }
 
         // 5. 刷题正确率
         double quizAccuracy = 0;

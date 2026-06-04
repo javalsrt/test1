@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">学习中心</string>
+    <string name="app_name">学习中</string>
     <string name="login_title">欢迎回来</string>
     <string name="login_subtitle">请登录您的学生账号</string>
     <string name="username_hint">请输入学号 / 用户名</string>

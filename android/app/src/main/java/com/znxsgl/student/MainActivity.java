@@ -1,10 +1,12 @@
 package com.znxsgl.student;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -149,9 +151,28 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        // 恢复状态栏颜色（防止系统重置）
+        applyStatusBarForCurrentFragment();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         WebSocketManager.getInstance().disconnect();
+    }
+
+    private void applyStatusBarForCurrentFragment() {
+        if (currentFragment instanceof ScheduleFragment) {
+            getWindow().setStatusBarColor(Color.WHITE);
+            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
+                    .setAppearanceLightStatusBars(true);
+        } else {
+            getWindow().setStatusBarColor(0xFFF2F2F7);
+            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
+                    .setAppearanceLightStatusBars(true);
+        }
     }
 
     private Fragment getFragmentById(int id) {
@@ -166,6 +187,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void switchFragment(Fragment fragment) {
         if (fragment == currentFragment) return;
+
+        // 根据 Fragment 类型设置状态栏颜色
+        if (fragment instanceof ScheduleFragment) {
+            // 课表：白色状态栏
+            getWindow().setStatusBarColor(Color.WHITE);
+            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
+                    .setAppearanceLightStatusBars(true);
+        } else {
+            // 专注/我的：与 canvas 背景色统一 (#F2F2F7)
+            getWindow().setStatusBarColor(0xFFF2F2F7);
+            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
+                    .setAppearanceLightStatusBars(true);
+        }
+
         FragmentTransaction transaction = fragmentManager.beginTransaction();
         transaction.setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out);
         if (fragment.isAdded()) {

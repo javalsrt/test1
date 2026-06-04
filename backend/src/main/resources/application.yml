@@ -15,7 +15,7 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
   global-config:
     db-config:
       id-type: auto
@@ -24,7 +24,7 @@ mybatis-plus:
 
 jwt:
   secret: ZnxsglRAGLearningApp2026SecretKeyForJWTTokenGenerationMustBe256Bits
-  expiration: 86400000
+  expiration: 604800000
 
 dashscope:
   api-key: sk-0e2186654cff45f7995e4543f9ad7dc3

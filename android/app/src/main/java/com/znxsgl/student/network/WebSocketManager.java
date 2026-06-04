@@ -74,7 +74,7 @@ public class WebSocketManager {
     public void connect(String baseUrl, long userId) {
         if (connected) return;
         String wsUrl = baseUrl.replace("http://", "ws://").replace("https://", "wss://");
-        wsUrl += "/ws/schedule?userId=" + userId;
+        wsUrl += "/ws/schedule?userId=" + userId + "&role=student";
 
         Request request = new Request.Builder().url(wsUrl).build();
         webSocket = client.newWebSocket(request, new WebSocketListener() {
