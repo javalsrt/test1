@@ -10,8 +10,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -120,5 +123,27 @@ public class ChatController {
         Long userId = (Long) auth.getPrincipal();
         chatService.markAsRead(courseName, userId);
         return ResponseEntity.ok(Map.of("msg", "已读"));
+    }
+
+    /** 简单文件上传（图片/文档），返回可访问 URL */
+    @PostMapping("/upload-file")
+    public ResponseEntity<Map<String, String>> uploadChatFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("courseName") String courseName) {
+        try {
+            String uploadDir = System.getProperty("user.dir") + "/uploads/chat/" + courseName;
+            File dir = new File(uploadDir);
+            if (!dir.exists()) dir.mkdirs();
+
+            String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Path filePath = Paths.get(uploadDir, filename);
+            Files.write(filePath, file.getBytes());
+
+            // 返回相对于 nginx 的静态资源路径
+            String url = "/uploads/chat/" + courseName + "/" + filename;
+            return ResponseEntity.ok(Map.of("url", url));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "上传失败: " + e.getMessage()));
+        }
     }
 }
