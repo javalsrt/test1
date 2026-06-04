@@ -162,6 +162,13 @@
         .chat-input .btn-send { background:#0A84FF;color:#fff;width:auto;padding:0 14px;font-size:13px;font-weight:500; }
         .chat-input .btn-tool { background:#F5F5F7;color:#86868B; }
         .chat-input .btn-tool:hover { background:#E8E8ED; }
+        /* @mention 下拉 */
+        .mention-dropdown { position:absolute;bottom:60px;left:16px;right:16px;max-height:220px;overflow-y:auto;background:#fff;border:1px solid #E5E7EB;border-radius:10px;box-shadow:0 -2px 16px rgba(0,0,0,0.10);z-index:10;display:none; }
+        .mention-dropdown .mention-item { padding:8px 14px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px; }
+        .mention-dropdown .mention-item:hover, .mention-dropdown .mention-item.active { background:#F0F4FF; }
+        .mention-dropdown .mention-item .avatar { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0; }
+        .mention-dropdown .mention-item.ai-item .avatar { background:#5E6AD2;color:#fff; }
+        .mention-dropdown .mention-item.student-item .avatar { background:#E8F5E9;color:#2B7A3C; }
     </style>
 </head>
 <body>
@@ -1897,15 +1904,128 @@
                     <input type="file" id="chatFileInput" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls" style="display:none;" onchange="uploadChatFile()">
                     <button class="btn-tool" title="发送文件" onclick="document.getElementById('chatFileInput').click()">📎</button>
                     <button class="btn-tool" title="密码签到" onclick="showCheckInDialog()">📍</button>
-                    <textarea id="chatInput" placeholder="输入消息..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatText();}"></textarea>
+                    <div style="position:relative;flex:1;">
+                        <textarea id="chatInput" placeholder="输入消息... @学生名" rows="1" onkeydown="handleChatKey(event)" oninput="handleChatInput()"></textarea>
+                        <div class="mention-dropdown" id="mentionDropdown"></div>
+                    </div>
                     <button class="btn-send" onclick="sendChatText()">发送</button>
                 </div>
             </div>`;
         document.body.appendChild(overlay);
         loadChatMessages();
         chatInterval = setInterval(loadChatMessages, 5000);
+        loadChatStudents(courseName);
         overlay.addEventListener('click', e => { if (e.target === overlay) closeChat(); });
     }
+
+    // ===== @mention 自动补全 =====
+    let chatStudents = [], mentionStart = -1, mentionFilter = '';
+
+    async function loadChatStudents(courseName) {
+        try {
+            const res = await fetch(API + '/api/chat/' + encodeURIComponent(courseName) + '/students', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) chatStudents = await res.json();
+        } catch(e) { chatStudents = []; }
+    }
+
+    function handleChatInput() {
+        const ta = document.getElementById('chatInput');
+        const dd = document.getElementById('mentionDropdown');
+        if (!ta || !dd) return;
+        const val = ta.value, pos = ta.selectionStart;
+        // 找最后一个 @ 位置
+        let atIdx = -1;
+        for (let i = pos - 1; i >= 0; i--) {
+            if (val[i] === '@' && (i === 0 || val[i-1] === ' ' || val[i-1] === '\n')) {
+                atIdx = i; break;
+            }
+        }
+        if (atIdx >= 0) {
+            mentionStart = atIdx;
+            mentionFilter = val.substring(atIdx + 1, pos);
+            showMentionDropdown(dd, mentionFilter);
+        } else {
+            mentionStart = -1;
+            dd.style.display = 'none';
+        }
+    }
+
+    function showMentionDropdown(dd, filter) {
+        let list = [];
+        // AI 在第一位（始终显示）
+        if ('ai'.startsWith(filter.toLowerCase()) || 'AI'.startsWith(filter)) {
+            list.push({ id: 0, realName: 'AI', isAi: true });
+        }
+        // 学生列表
+        chatStudents.forEach(s => {
+            if (!filter || s.realName.startsWith(filter) || s.realName.includes(filter)) {
+                list.push({ id: s.id, realName: s.realName, isAi: false });
+            }
+        });
+        if (list.length === 0) { dd.style.display = 'none'; return; }
+        dd.innerHTML = list.map((s, i) =>
+            '<div class="mention-item ' + (s.isAi ? 'ai-item' : 'student-item')
+            + (i === 0 ? ' active' : '') + '" data-name="' + escHtml(s.realName) + '" data-id="' + s.id + '" '
+            + 'onmousedown="event.preventDefault();insertMention(\'' + escJs(s.realName) + '\')">'
+            + '<div class="avatar">' + (s.isAi ? '🤖' : s.realName.charAt(0)) + '</div>'
+            + '<span>' + escHtml(s.realName) + '</span>'
+            + '</div>'
+        ).join('');
+        dd.style.display = 'block';
+    }
+
+    function handleChatKey(e) {
+        const dd = document.getElementById('mentionDropdown');
+        if (!dd || dd.style.display === 'none') {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatText(); }
+            return;
+        }
+        const items = dd.querySelectorAll('.mention-item');
+        let activeIdx = -1;
+        items.forEach((it, i) => { if (it.classList.contains('active')) activeIdx = i; });
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (activeIdx < items.length - 1) {
+                items[activeIdx].classList.remove('active');
+                items[activeIdx + 1].classList.add('active');
+                items[activeIdx + 1].scrollIntoView({ block: 'nearest' });
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (activeIdx > 0) {
+                items[activeIdx].classList.remove('active');
+                items[activeIdx - 1].classList.add('active');
+                items[activeIdx - 1].scrollIntoView({ block: 'nearest' });
+            }
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (activeIdx >= 0) {
+                e.preventDefault();
+                const name = items[activeIdx].getAttribute('data-name');
+                insertMention(name);
+            }
+        } else if (e.key === 'Escape') {
+            dd.style.display = 'none';
+            mentionStart = -1;
+        }
+    }
+
+    function insertMention(name) {
+        const ta = document.getElementById('chatInput');
+        const dd = document.getElementById('mentionDropdown');
+        if (!ta || mentionStart < 0) return;
+        const before = ta.value.substring(0, mentionStart);
+        const after = ta.value.substring(ta.selectionStart);
+        ta.value = before + '@' + name + ' ' + after;
+        ta.focus();
+        const newPos = mentionStart + name.length + 2;
+        ta.setSelectionRange(newPos, newPos);
+        dd.style.display = 'none';
+        mentionStart = -1;
+    }
+
+    // 发送消息（保留 sendChatText 不变）
 
     function closeChat() {
         if (chatInterval) clearInterval(chatInterval);

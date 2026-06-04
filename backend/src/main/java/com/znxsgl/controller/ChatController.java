@@ -217,6 +217,19 @@ public class ChatController {
         }
     }
 
+    /** 获取课程所有学生（用于@mention） */
+    @GetMapping("/{courseName}/students")
+    public ResponseEntity<List<Map<String, Object>>> getCourseStudents(
+            @PathVariable String courseName) {
+        List<Map<String, Object>> list = jdbc.queryForList(
+            "SELECT DISTINCT u.id, u.real_name AS realName FROM user u " +
+            "JOIN course_class cc ON cc.class_id = u.class_id " +
+            "JOIN course c ON c.id = cc.course_id " +
+            "WHERE c.course_name = ? AND u.role = 1 ORDER BY u.real_name",
+            courseName);
+        return ResponseEntity.ok(list);
+    }
+
     /** 获取学生各课程未读消息数量 */
     @GetMapping("/unread")
     public ResponseEntity<List<Map<String, Object>>> getUnreadCount(Authentication auth) {
