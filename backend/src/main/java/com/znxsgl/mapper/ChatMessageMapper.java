@@ -29,8 +29,8 @@ public interface ChatMessageMapper extends BaseMapper<ChatMessage> {
     List<StudentAskStatsDTO> countStudentAsks(@Param("courseName") String courseName,
                                               @Param("classId") Long classId);
 
-    /** 标记指定课程+学生的教师消息为已读 */
+    /** 标记课程中所有非本人的消息为已读 */
     @Update("UPDATE chat_message SET is_read = 1 " +
-            "WHERE course_name = #{courseName} AND user_id = #{userId} AND sender_role = 'teacher' AND is_read = 0")
+            "WHERE course_name = #{courseName} AND user_id != #{userId} AND is_read = 0")
     int markAsRead(@Param("courseName") String courseName, @Param("userId") Long userId);
 }
