@@ -25,12 +25,13 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.znxsgl.student.CourseDetailActivity;
 import com.znxsgl.student.R;
 import com.znxsgl.student.model.StudentCourse;
-import com.znxsgl.student.R;
 import com.znxsgl.student.network.ApiService;
 import com.znxsgl.student.network.RetrofitClient;
+import com.znxsgl.student.network.WebSocketManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -39,7 +40,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class ProfileFragment extends Fragment {
+public class ProfileFragment extends Fragment implements WebSocketManager.OnChatUpdateListener {
 
     private RecyclerView rvCourses;
     private CourseAdapter adapter;
@@ -48,13 +49,14 @@ public class ProfileFragment extends Fragment {
     private SharedPreferences prefs;
     private boolean isFirstResume = true;
     private TextView tvStatHours;
+    private final Map<String, Integer> unreadMap = new HashMap<>();
 
     // 学习时长实时刷新
     private final Runnable refreshFocusTotal = new Runnable() {
         @Override
         public void run() {
             loadFocusTotal();
-            mainHandler.postDelayed(this, 10000); // 每10秒刷新
+            mainHandler.postDelayed(this, 10000);
         }
     };
 
@@ -103,6 +105,10 @@ public class ProfileFragment extends Fragment {
         adapter = new CourseAdapter();
         rvCourses.setAdapter(adapter);
 
+        // 注册聊天推送监听
+        WebSocketManager.getInstance().addChatListener(this);
+        loadUnreadCounts();
+
         // 长按拖拽排序
         ItemTouchHelper helper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
                 ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
@@ -144,6 +150,12 @@ public class ProfileFragment extends Fragment {
         mainHandler.removeCallbacks(refreshFocusTotal);
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        WebSocketManager.getInstance().removeChatListener(this);
+    }
+
     /** hide() 不触发 onPause，处理 Tab 切换 */
     @Override
     public void onHiddenChanged(boolean hidden) {
@@ -151,9 +163,9 @@ public class ProfileFragment extends Fragment {
         if (hidden) {
             mainHandler.removeCallbacks(refreshFocusTotal);
         } else {
-            // 切回此 Tab，立即刷新 + 启动定时刷新
             loadFocusTotal();
             loadCourses();
+            loadUnreadCounts();
             if (getView() != null) loadBookmarkCount(getView());
             mainHandler.removeCallbacks(refreshFocusTotal);
             mainHandler.post(refreshFocusTotal);
@@ -426,5 +438,36 @@ public class ProfileFragment extends Fragment {
             courseList.clear();
             courseList.addAll(ordered);
         }
+    }
+
+    /** 加载未读消息数 */
+    private void loadUnreadCounts() {
+        String token = "Bearer " + prefs.getString("token", "");
+        ApiService api = RetrofitClient.getInstance().create(ApiService.class);
+        api.getUnreadChatCount(token).enqueue(new Callback<List<Map<String, Object>>>() {
+            @Override public void onResponse(Call<List<Map<String, Object>>> call,
+                                              Response<List<Map<String, Object>>> resp) {
+                if (!isAdded() || resp.body() == null) return;
+                unreadMap.clear();
+                for (Map<String, Object> row : resp.body()) {
+                    String cn = (String) row.get("courseName");
+                    Object cnt = row.get("count");
+                    unreadMap.put(cn, cnt instanceof Number ? ((Number) cnt).intValue() : 0);
+                }
+                if (adapter != null) adapter.notifyDataSetChanged();
+            }
+            @Override public void onFailure(Call<List<Map<String, Object>>> call, Throwable t) {}
+        });
+    }
+
+    @Override
+    public void onChatUpdate(String courseName, String senderName, String content) {
+        // 收到实时推送，更新未读计数
+        Integer cur = unreadMap.getOrDefault(courseName, 0);
+        unreadMap.put(courseName, cur + 1);
+        if (adapter != null) adapter.notifyDataSetChanged();
+        // 可选：显示Toast提示
+        mainHandler.post(() -> 
+            Toast.makeText(getContext(), courseName + " 新消息: " + content, Toast.LENGTH_SHORT).show());
     }
 }

@@ -51,6 +51,10 @@ public interface ApiService {
             @Header("Authorization") String token,
             @Body Map<String, String> body);
 
+    @GET("/api/chat/unread")
+    Call<List<Map<String, Object>>> getUnreadChatCount(
+            @Header("Authorization") String token);
+
     @POST("/api/chat/rag")
     Call<ChatMsgDto> ragChat(
             @Header("Authorization") String token,

@@ -5,6 +5,8 @@ import com.znxsgl.dto.StudentAskStatsDTO;
 import com.znxsgl.service.ChatService;
 import com.znxsgl.service.DashScopeService;
 import com.znxsgl.service.RagService;
+import com.znxsgl.websocket.ScheduleWebSocketHandler;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -23,12 +25,17 @@ public class ChatController {
     private final ChatService chatService;
     private final DashScopeService aiService;
     private final RagService ragService;
+    private final ScheduleWebSocketHandler wsHandler;
+    private final JdbcTemplate jdbc;
 
     public ChatController(ChatService chatService, DashScopeService aiService,
-                          RagService ragService) {
+                          RagService ragService, ScheduleWebSocketHandler wsHandler,
+                          JdbcTemplate jdbc) {
         this.chatService = chatService;
         this.aiService = aiService;
         this.ragService = ragService;
+        this.wsHandler = wsHandler;
+        this.jdbc = jdbc;
     }
 
     // 获取课程聊天记录（个人：学生看自己的AI对话，按userId过滤）
@@ -50,9 +57,32 @@ public class ChatController {
     public ResponseEntity<ChatMessageDTO> sendMessage(
             @RequestBody Map<String, String> body, Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
-        return ResponseEntity.ok(chatService.sendMessage(
-                body.get("courseName"), userId, body.get("content"),
-                body.getOrDefault("senderRole", "student")));
+        String courseName = body.get("courseName");
+        String content = body.get("content");
+        String senderRole = body.getOrDefault("senderRole", "student");
+
+        ChatMessageDTO msg = chatService.sendMessage(courseName, userId, content, senderRole);
+
+        // 推送实时通知给课程所有学生
+        try {
+            List<Long> studentIds = jdbc.queryForList(
+                "SELECT DISTINCT u.id FROM user u " +
+                "JOIN course_class cc ON cc.class_id = u.class_id " +
+                "JOIN course c ON c.id = cc.course_id " +
+                "WHERE c.course_name = ? AND u.role = 1 AND u.id != ?",
+                Long.class, courseName, userId);
+            String preview = content.length() > 60 ? content.substring(0, 60) + "..." : content;
+            for (Long sid : studentIds) {
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("courseName", courseName);
+                data.put("senderName", msg.getSenderName());
+                data.put("content", preview);
+                data.put("senderRole", senderRole);
+                wsHandler.sendToUser(sid, "chat_update", data);
+            }
+        } catch (Exception ignored) {}
+
+        return ResponseEntity.ok(msg);
     }
 
     // RAG 对话（自动检索课程知识库）
@@ -145,11 +175,26 @@ public class ChatController {
             Path filePath = Paths.get(uploadDir, filename);
             Files.write(filePath, file.getBytes());
 
-            // 返回相对于 nginx 的静态资源路径
             String url = "/uploads/chat/" + courseName + "/" + filename;
             return ResponseEntity.ok(Map.of("url", url));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "上传失败: " + e.getMessage()));
         }
+    }
+
+    /** 获取学生各课程未读消息数量 */
+    @GetMapping("/unread")
+    public ResponseEntity<List<Map<String, Object>>> getUnreadCount(Authentication auth) {
+        Long userId = (Long) auth.getPrincipal();
+        List<Map<String, Object>> result = jdbc.queryForList(
+            "SELECT cm.course_name AS courseName, COUNT(*) AS count " +
+            "FROM chat_message cm " +
+            "WHERE cm.user_id != ? " +
+            "AND cm.course_name IN (SELECT c.course_name FROM course c " +
+            "  JOIN course_class cc ON cc.course_id = c.id " +
+            "  JOIN user u ON u.class_id = cc.class_id WHERE u.id = ?) " +
+            "GROUP BY cm.course_name",
+            userId, userId);
+        return ResponseEntity.ok(result);
     }
 }

@@ -36,7 +36,12 @@ public class WebSocketManager {
         void onUpdate(String courseName, String content, String scheduleInfo);
     }
 
+    public interface OnChatUpdateListener {
+        void onChatUpdate(String courseName, String senderName, String content);
+    }
+
     private final List<OnScheduleUpdateListener> listeners = new ArrayList<>();
+    private final List<OnChatUpdateListener> chatListeners = new ArrayList<>();
 
     private WebSocketManager() {
         client = new OkHttpClient.Builder()
@@ -60,6 +65,19 @@ public class WebSocketManager {
     public void removeListener(OnScheduleUpdateListener listener) {
         synchronized (listeners) {
             listeners.remove(listener);
+        }
+    }
+
+    /** 添加聊天更新监听 */
+    public void addChatListener(OnChatUpdateListener listener) {
+        synchronized (chatListeners) {
+            if (!chatListeners.contains(listener)) chatListeners.add(listener);
+        }
+    }
+
+    public void removeChatListener(OnChatUpdateListener listener) {
+        synchronized (chatListeners) {
+            chatListeners.remove(listener);
         }
     }
 
@@ -101,6 +119,16 @@ public class WebSocketManager {
                         synchronized (listeners) {
                             for (OnScheduleUpdateListener l : listeners) {
                                 mainHandler.post(() -> l.onUpdate(courseName, content, scheduleInfo));
+                            }
+                        }
+                    } else if ("chat_update".equals(msgType)) {
+                        Map<String, Object> data = (Map<String, Object>) msg.get("data");
+                        String courseName = (String) data.get("courseName");
+                        String senderName = (String) data.get("senderName");
+                        String content = (String) data.get("content");
+                        synchronized (chatListeners) {
+                            for (OnChatUpdateListener l : chatListeners) {
+                                mainHandler.post(() -> l.onChatUpdate(courseName, senderName, content));
                             }
                         }
                     }
