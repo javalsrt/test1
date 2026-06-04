@@ -1930,16 +1930,19 @@
                 const cls = isMine ? 'mine' : 'other';
                 const name = isMine ? '我' : (m.senderName || '学生');
                 const time = m.createdAt ? new Date(m.createdAt).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) : '';
-                let content = escHtml(m.content || '');
+                const raw = m.content || '';
+                let content;
                 // 图片消息
-                if (content.startsWith('[image]')) {
-                    const url = content.substring(7);
-                    content = '<img src="' + url + '" onclick="window.open(\'' + url + '\')" />';
-                } else if (content.startsWith('[file]')) {
-                    const parts = content.substring(6).split('|');
+                if (raw.startsWith('[image]')) {
+                    const url = API + raw.substring(7);
+                    content = '<img src="' + url + '" onclick="window.open(\'' + url + '\')" style="max-width:100%;max-height:200px;border-radius:8px;cursor:pointer;" />';
+                } else if (raw.startsWith('[file]')) {
+                    const parts = raw.substring(6).split('|');
                     const fname = parts[0] || '文件';
-                    const furl = parts[1] || '#';
+                    const furl = API + (parts[1] || '#');
                     content = '<a class="file-link" href="' + furl + '" target="_blank">📄 ' + escHtml(fname) + '</a>';
+                } else {
+                    content = escHtml(raw);
                 }
                 return '<div class="chat-msg ' + cls + '"><div class="sender">' + name + '</div>' + content
                     + '<div class="time">' + time + '</div></div>';
@@ -1976,7 +1979,7 @@
             if (data.url) {
                 await fetch(API + '/api/chat/send', {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ courseName: chatCourse, content: '[image]' + data.url, senderRole: 'teacher' })
+                    body: JSON.stringify({ courseName: chatCourse, content: '[image]/uploads/chat/' + encodeURIComponent(chatCourse) + '/' + encodeURIComponent(data.fileName), senderRole: 'teacher' })
                 });
                 loadChatMessages();
             }
@@ -1998,7 +2001,7 @@
             if (data.url) {
                 await fetch(API + '/api/chat/send', {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ courseName: chatCourse, content: '[file]' + file.name + '|' + data.url, senderRole: 'teacher' })
+                    body: JSON.stringify({ courseName: chatCourse, content: '[file]' + file.name + '|/uploads/chat/' + encodeURIComponent(chatCourse) + '/' + encodeURIComponent(data.fileName), senderRole: 'teacher' })
                 });
                 loadChatMessages();
             }

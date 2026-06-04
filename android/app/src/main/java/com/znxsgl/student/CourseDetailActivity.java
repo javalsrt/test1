@@ -147,6 +147,27 @@ public class CourseDetailActivity extends AppCompatActivity {
                     && (cur.getTime() - prevTime.getTime()) > 10000) {
                 items.add(new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(cur));
             }
+            // 解析 [image] / [file] 前缀
+            String raw = msg.getContent();
+            if (raw != null && raw.startsWith("[image]")) {
+                msg.msgType = "image";
+                msg.imageUrl = raw.substring(7);
+                msg.setContent("[图片]");
+            } else if (raw != null && raw.startsWith("[file]")) {
+                msg.msgType = "file";
+                String rest = raw.substring(6);
+                int sep = rest.indexOf('|');
+                if (sep > 0) {
+                    msg.fileName = rest.substring(0, sep);
+                    msg.fileUrl = rest.substring(sep + 1);
+                } else {
+                    msg.fileName = rest;
+                    msg.fileUrl = "#";
+                }
+                msg.setContent("📄 " + msg.fileName);
+            } else {
+                msg.msgType = "text";
+            }
             items.add(msg);
             prevTime = cur;
         }
@@ -438,12 +459,19 @@ public class CourseDetailActivity extends AppCompatActivity {
 
     // ===== Adapter =====
     private static class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-        private static final int TYPE_MSG = 0, TYPE_TIME = 1;
+        private static final int TYPE_TIME = 0, TYPE_TEXT = 1, TYPE_IMAGE = 2, TYPE_FILE = 3;
         private final List<Object> data;
         ChatAdapter(List<Object> d) { data = d; }
 
         @Override public int getItemViewType(int p) {
-            return data.get(p) instanceof ChatMsgDto ? TYPE_MSG : TYPE_TIME;
+            Object o = data.get(p);
+            if (o instanceof ChatMsgDto) {
+                ChatMsgDto m = (ChatMsgDto) o;
+                if ("image".equals(m.msgType)) return TYPE_IMAGE;
+                if ("file".equals(m.msgType)) return TYPE_FILE;
+                return TYPE_TEXT;
+            }
+            return TYPE_TIME;
         }
 
         @NonNull @Override
@@ -455,6 +483,35 @@ public class CourseDetailActivity extends AppCompatActivity {
                 tv.setLayoutParams(new RecyclerView.LayoutParams(-1, -2));
                 return new TimeVH(tv);
             }
+            if (vt == TYPE_IMAGE) {
+                LinearLayout item = new LinearLayout(parent.getContext());
+                item.setLayoutParams(new RecyclerView.LayoutParams(-1, -2));
+                item.setOrientation(LinearLayout.VERTICAL); item.setPadding(0, 4, 0, 4);
+                android.widget.ImageView iv = new android.widget.ImageView(parent.getContext());
+                iv.setAdjustViewBounds(true);
+                int maxW = dp(parent.getContext(), 260);
+                iv.setMaxWidth(maxW);
+                iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+                iv.setLayoutParams(new LinearLayout.LayoutParams(maxW, -2));
+                GradientDrawable bg = new GradientDrawable();
+                bg.setCornerRadius(dp(parent.getContext(), 12));
+                bg.setColor(0xFFF0F0F0);
+                iv.setBackground(bg);
+                iv.setPadding(2, 2, 2, 2);
+                item.addView(iv);
+                return new ImgVH(item, iv);
+            }
+            if (vt == TYPE_FILE) {
+                LinearLayout item = new LinearLayout(parent.getContext());
+                item.setLayoutParams(new RecyclerView.LayoutParams(-1, -2));
+                item.setOrientation(LinearLayout.VERTICAL); item.setPadding(0, 4, 0, 4);
+                TextView tv = new TextView(parent.getContext());
+                tv.setTextSize(14); tv.setPadding(24, 14, 24, 14);
+                tv.setLayoutParams(new LinearLayout.LayoutParams(-2, -2));
+                item.addView(tv);
+                return new FileVH(item, tv);
+            }
+            // TYPE_TEXT
             LinearLayout item = new LinearLayout(parent.getContext());
             item.setLayoutParams(new RecyclerView.LayoutParams(-1, -2));
             item.setOrientation(LinearLayout.VERTICAL); item.setPadding(0, 4, 0, 4);
@@ -463,27 +520,84 @@ public class CourseDetailActivity extends AppCompatActivity {
             tv.setMaxWidth(dp(parent.getContext(), 320));
             tv.setLayoutParams(new LinearLayout.LayoutParams(-2, -2));
             item.addView(tv);
-            return new MsgVH(item, tv);
+            return new TextVH(item, tv);
         }
 
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {
             if (h instanceof TimeVH) { ((TimeVH)h).tv.setText((String)data.get(p)); return; }
-            MsgVH vh = (MsgVH)h;
-            ChatMsgDto m = (ChatMsgDto)data.get(p);
+            ChatMsgDto m = (ChatMsgDto) data.get(p);
+            boolean me = "student".equals(m.getSenderRole());
+
+            if (h instanceof ImgVH) {
+                ImgVH vh = (ImgVH) h;
+                String url = m.imageUrl;
+                if (url != null && !url.startsWith("http")) {
+                    url = RetrofitClient.getBaseUrl() + url;
+                }
+                // position chat bubble
+                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) vh.iv.getLayoutParams();
+                lp.gravity = me ? Gravity.END : Gravity.START;
+                lp.setMargins(me ? 0 : 8, 0, me ? 8 : 0, 0);
+                vh.iv.setLayoutParams(lp);
+                // Load image in background (capture final url ref)
+                final String finalUrl = url;
+                vh.iv.setTag(finalUrl);
+                new Thread(() -> {
+                    try {
+                        java.net.URL imgUrl = new java.net.URL(finalUrl);
+                        java.io.InputStream is = imgUrl.openStream();
+                        android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeStream(is);
+                        is.close();
+                        if (bmp != null) {
+                            vh.iv.post(() -> {
+                                if (finalUrl.equals(vh.iv.getTag())) vh.iv.setImageBitmap(bmp);
+                            });
+                        }
+                    } catch (Exception ignored) {}
+                }).start();
+                vh.iv.setOnClickListener(v -> {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(finalUrl));
+                    v.getContext().startActivity(intent);
+                });
+                return;
+            }
+
+            if (h instanceof FileVH) {
+                FileVH vh = (FileVH) h;
+                vh.tv.setText("📄 " + (m.fileName != null ? m.fileName : "文件"));
+                vh.tv.setLineSpacing(4f, 1f);
+                vh.tv.setOnClickListener(v -> {
+                    String furl = m.fileUrl;
+                    if (furl != null && !furl.startsWith("http")) furl = RetrofitClient.getBaseUrl() + furl;
+                    Intent intent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(furl));
+                    v.getContext().startActivity(intent);
+                });
+                applyBubbleStyle(vh.tv, me);
+                return;
+            }
+
+            // TYPE_TEXT
+            TextVH vh = (TextVH) h;
             vh.tv.setText(m.getContent());
             vh.tv.setLineSpacing(4f, 1f);
-            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams)vh.tv.getLayoutParams();
+            applyBubbleStyle(vh.tv, me);
+        }
+
+        private void applyBubbleStyle(TextView tv, boolean me) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) tv.getLayoutParams();
             GradientDrawable bg = new GradientDrawable();
-            bg.setCornerRadius(dp(vh.tv.getContext(), 16));
-            boolean me = "student".equals(m.getSenderRole());
-            if (me) { bg.setColor(0xFF0A84FF); vh.tv.setTextColor(Color.WHITE); lp.gravity=Gravity.END; lp.setMargins(0,0,8,0); }
-            else { bg.setColor(0xFFF5F5F7); vh.tv.setTextColor(0xFF1D1D1F); lp.gravity=Gravity.START; lp.setMargins(8,0,0,0); }
-            vh.tv.setBackground(bg); vh.tv.setLayoutParams(lp);
+            bg.setCornerRadius(dp(tv.getContext(), 16));
+            if (me) { bg.setColor(0xFF0A84FF); tv.setTextColor(Color.WHITE); lp.gravity=Gravity.END; lp.setMargins(0,0,8,0); }
+            else { bg.setColor(0xFFF5F5F7); tv.setTextColor(0xFF1D1D1F); lp.gravity=Gravity.START; lp.setMargins(8,0,0,0); }
+            tv.setBackground(bg);
+            tv.setLayoutParams(lp);
         }
 
         @Override public int getItemCount() { return data.size(); }
-        static class MsgVH extends RecyclerView.ViewHolder { TextView tv; MsgVH(View v, TextView t) { super(v); tv=t; } }
+        static class TextVH extends RecyclerView.ViewHolder { TextView tv; TextVH(View v, TextView t) { super(v); tv=t; } }
+        static class ImgVH extends RecyclerView.ViewHolder { android.widget.ImageView iv; ImgVH(View v, android.widget.ImageView i) { super(v); iv=i; } }
+        static class FileVH extends RecyclerView.ViewHolder { TextView tv; FileVH(View v, TextView t) { super(v); tv=t; } }
         static class TimeVH extends RecyclerView.ViewHolder { TextView tv; TimeVH(TextView t) { super(t); tv=t; } }
         static int dp(android.content.Context c, int v) { return (int)(v*c.getResources().getDisplayMetrics().density+0.5f); }
     }

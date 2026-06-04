@@ -71,7 +71,17 @@ public class ChatController {
                 "JOIN course c ON c.id = cc.course_id " +
                 "WHERE c.course_name = ? AND u.role = 1 AND u.id != ?",
                 Long.class, courseName, userId);
-            String preview = content.length() > 60 ? content.substring(0, 60) + "..." : content;
+            String preview;
+            if (content.startsWith("[image]")) {
+                preview = "📷 [图片]";
+            } else if (content.startsWith("[file]")) {
+                String fn = content.substring(6);
+                int pSep = fn.indexOf('|');
+                String fname = pSep > 0 ? fn.substring(0, pSep) : fn;
+                preview = "📄 [文件] " + (fname.length() > 20 ? fname.substring(0, 20) + "..." : fname);
+            } else {
+                preview = content.length() > 60 ? content.substring(0, 60) + "..." : content;
+            }
             for (Long sid : studentIds) {
                 Map<String, Object> data = new LinkedHashMap<>();
                 data.put("courseName", courseName);
@@ -176,7 +186,7 @@ public class ChatController {
             Files.write(filePath, file.getBytes());
 
             String url = "/uploads/chat/" + courseName + "/" + filename;
-            return ResponseEntity.ok(Map.of("url", url));
+            return ResponseEntity.ok(Map.of("url", url, "fileName", filename));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "上传失败: " + e.getMessage()));
         }

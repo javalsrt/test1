@@ -18,6 +18,12 @@ public class ChatMsgDto {
     @SerializedName("createdAt")
     private String createdAt;
 
+    // 客户端解析：消息类型（text / image / file）
+    public String msgType = "text";
+    public String imageUrl;
+    public String fileName;
+    public String fileUrl;
+
     public long getId() { return id; }
     public void setId(long v) { id = v; }
     public String getCourseName() { return courseName; }

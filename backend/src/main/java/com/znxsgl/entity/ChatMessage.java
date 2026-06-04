@@ -12,8 +12,9 @@ public class ChatMessage {
     private String senderName;
     private String senderRole;
     private String content;
-    private Integer isRead;    // 0=未读, 1=已读
+    private Integer isRead;
     private LocalDateTime createdAt;
+    private Long mentionUserId; // @私密消息的目标学生ID（null=公开消息）
 
     public Long getId() { return id; }
     public void setId(Long v) { id = v; }
@@ -31,4 +32,6 @@ public class ChatMessage {
     public void setIsRead(Integer v) { isRead = v; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime v) { createdAt = v; }
+    public Long getMentionUserId() { return mentionUserId; }
+    public void setMentionUserId(Long v) { mentionUserId = v; }
 }
